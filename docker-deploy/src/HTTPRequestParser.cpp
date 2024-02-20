@@ -61,11 +61,11 @@ public:
 };
 
 int main() {
-    std::string rawRequest = "POST / HTTP/1.1\r\n"
+    std::string rawRequest = "GET / HTTP/1.1\r\n"
         "Host: localhost:8000\r\n"
         "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:50.0) Gecko/20100101 Firefox/50.0\r\n"
         "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
-        "Accept-Language: en-US,en;q=0.5\r\n"
+        "Accept-Language: en,en;q=0.5\r\n"
         "Accept-Encoding: gzip, deflate\r\n"
         "Connection: keep-alive\r\n"
         "Upgrade-Insecure-Requests: 1\r\n"
@@ -77,12 +77,12 @@ int main() {
     
     HTTPRequestParser parser = HTTPRequestParser(rawRequest);
     
-    assert(parser.getMethod() == "POST");
+    assert(parser.getMethod() == "GET");
     assert(parser.getRequestURI() == "/");
     assert(parser.getProtocolVersion() == 11);
     assert(parser.getHeader("Host") == "localhost:8000");
     assert(parser.getHeader("User-Agent") == "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:50.0) Gecko/20100101 Firefox/50.0");
-    assert(parser.getHeader("Accept-Language") == "en-US,en;q=0.5");
+    assert(parser.getHeader("Accept-Language") == "en,en;q=0.5");
     assert(parser.getHeader("Accept-Encoding") == "gzip, deflate");
     assert(parser.getHeader("Connection") == "keep-alive");
     assert(parser.getHeader("Upgrade-Insecure-Requests") == "1");
