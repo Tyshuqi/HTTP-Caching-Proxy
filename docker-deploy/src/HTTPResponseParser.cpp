@@ -25,6 +25,16 @@ std::string HTTPResponseParser::getBody() const {
     return parsedResponse.get().body();
 }
 
+std::string HTTPResponseParser::getHeader(const std::string& name) const {
+        auto& headers = parsedResponse.get().base();
+        auto it = headers.find(name);
+        if (it != headers.end()) {
+            return it->value().to_string();
+        } else {
+            return "Header not found";
+        }
+    }
+
 bool HTTPResponseParser::isChunked() const{
     return parsedResponse.chunked();
 }

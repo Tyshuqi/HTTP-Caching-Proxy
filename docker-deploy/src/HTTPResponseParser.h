@@ -16,4 +16,5 @@ public:
     bool isChunked() const;
     //std::string getHeader() const;
     std::string getBody() const;
+    std::string getHeader(const std::string& name) const;
 };
