@@ -160,27 +160,47 @@ void Proxy::processConnect(int client_fd, int server_fd)
     }
 }
 
-/*void Proxy::processGet(int client_fd, int server_fd, string request){
-    send(server_fd, request.c_str(), request.size(), 0); 
-    // then, get ready to receive the message from origin server
-    char rawRes[MAXDATASIZE];
-    int resLen = recv(server_fd, rawRes, sizeof(rawRes), 0);
-    // skip some error handling here
-    rawRes[resLen] = '\0';
-    string resStr(rawRes);
-    HTTPResponseParser parsedRes(resStr);
-    if(parsedRes.isChunked()){
-        send(client_fd, rawRes, resLen, 0);
-        char chunkedRes[MAXDATASIZE];
-        int chunkedResLen = recv(server_fd, chunkedRes, sizeof(chunkedRes), 0);
-        chunkedRes[chunkedResLen] = '\0';
-        send(client_fd, chunkedRes, chunkedResLen, 0);
+void Proxy::processGet(int client_fd, int server_fd, string host, string port, string request){
+    HTTPRequestParser parsedReq(request);
+    int clientMaxStale = parsedReq.getMaxStale();
+    HTTPCache cache;
+    string cacheKey = host + ":" + port;
+    // if we can find the response in cache
+    if(cache.isValid(cacheKey, clientMaxStale)){
+        string cachedResponse = cache.get(cacheKey);
+        send(client_fd, cachedResponse.c_str(), cachedResponse.size(), 0);
     }
-    else{
-
+    else{ // if there is no response in cache
+        // send request to origin server
+        send(server_fd, request.c_str(), request.size(), 0); 
+        // then, get ready to receive the message from origin server
+        char rawRes[MAXDATASIZE];
+        int resLen = recv(server_fd, rawRes, sizeof(rawRes), 0);
+        // skip some error handling here
+        rawRes[resLen] = '\0';
+        string resStr(rawRes);
+        HTTPResponseParser parsedRes(resStr);
+        // if the response is chunked
+        if(parsedRes.isChunked()){
+            send(client_fd, rawRes, resLen, 0);
+            char chunkedRes[MAXDATASIZE];
+            while(true){
+                int chunkedResLen = recv(server_fd, chunkedRes, sizeof(chunkedRes), 0);
+                if(chunkedResLen <= 0){
+                    break;
+                }
+                chunkedRes[chunkedResLen] = '\0';
+                send(client_fd, chunkedRes, chunkedResLen, 0);
+            }
+            // need code to store it in cache
+        }
+        else{ // if the response is not chunked
+            send(client_fd, rawRes, resLen, 0);
+            // need code to store it in cache
+        }
     }
 
-}*/
+}
 
 
 
@@ -214,12 +234,12 @@ void Proxy::processRequest(const char *port){
 
     // POST
     else if (method == "POST"){
-            processPost(client_fd, server_fd, requestStr);
+        processPost(client_fd, server_fd, requestStr);
     }
     
     // GET
      else if (method == "GET"){
-            //processGet(client_fd, parseHost, parsePort, requestStr);
+        processGet(client_fd, server_fd, parseHost, parsePort, requestStr);
     }
 
     close(client_fd);

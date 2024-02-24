@@ -40,7 +40,7 @@ public:
     
     void processConnect(int client_fd, int server_fd);
     void processPost(int client_fd, int server_fd, const string & requestStr);
-    void processGet(int client_fd, int server_fd, std::string request);
+    void processGet(int client_fd, int server_fd, std::string host, std::string port, std::string request);
     void processRequest(const char* port);
 
     void parseCacheControlAndExpires(const std::string &cacheControl, const std::string &expiresHeader, CacheEntry &response);
