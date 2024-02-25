@@ -1,6 +1,5 @@
 #include "helperFns.h"
 
-
 std::string calculateExpiration(const std::string& dateStr, const std::string& cacheControlStr) {
         std::tm date = parseDate(dateStr);
         int maxAge = parseMaxAge(cacheControlStr);
@@ -84,6 +83,22 @@ bool isNotExpired(const std::string& rawResponse){
     }
 }
 
+std::string addIfNoneMatch(const std::string& request){
+    HTTPRequestParser parser(request);
+    std::string ifNoneMatchLine = "If-None-Match:" + parser.getHeader("ETag") + "\r\n";
+    std::string ans = request;
+    ans.insert(ans.size() - 2, ifNoneMatchLine);
+    return ans;
+}
+
+std::string addIfModifiedSince(const std::string& request){
+    HTTPRequestParser parser(request);
+    std::string ifModSinceLine = "If-Modified-Since:" + parser.getHeader("Last-Modified") + "\r\n";
+    std::string ans = request;
+    ans.insert(ans.size() - 2, ifModSinceLine);
+    return ans;
+}
+
 int main() {
     std::string httpResponse =
         "HTTP/1.1 200 OK\r\n"
@@ -92,7 +107,7 @@ int main() {
         "Content-Type: text/html\r\n"
         "Content-Length: 12345\r\n"
         "Expires: Thu, 24 Feb 2022 13:00:00 GMT\r\n"
-        //"Cache-Control: max-age=3600, public\r\n"
+        "Cache-Control: max-age=3600, public\r\n"
         
         "\r\n"
         "<!DOCTYPE html>\n"
@@ -104,12 +119,24 @@ int main() {
         "    <!-- Page content goes here -->\n"
         "</body>\n"
         "</html>";
+    
+    std::string rawRequest = "GET /example/resource HTTP/1.1\r\n"
+                             "Host: example.com\r\n"
+                             "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:100.0) Gecko/20100101 Firefox/100.0\r\n"
+                             "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\n"
+                             "ETag: \"abcdef1234567890\"\r\n"
+                             "Last-Modified: Sat, 01 Jan 2022 12:00:00 GMT\r\n"
+                             "Connection: keep-alive\r\n\r\n";
 
     HTTPResponseParser responseParser(httpResponse);
 
     std::string result = calculateExpiration(responseParser.getHeader("Date"), responseParser.getHeader("Cache-Control"));
     //std::cout << "exp time: " << result << std::endl;
     bool isNotEx = isNotExpired(httpResponse);
-    std::cout << "is not expired: " << isNotEx << std::endl;
+    //std::cout << "is not expired: " << isNotEx << std::endl;
+    std::string match = addIfNoneMatch(rawRequest);
+    std::string modify = addIfModifiedSince(rawRequest);
+    std::cout << "match:" << match << std::endl;
+    std::cout << "modify:" << modify << std::endl;
     return 0;
 }

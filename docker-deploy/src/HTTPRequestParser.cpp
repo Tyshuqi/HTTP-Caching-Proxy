@@ -68,3 +68,20 @@ int HTTPRequestParser::getMaxStale() const{
         return 0; // Error parsing value, treat as if max-stale is not present
     }
 }
+
+/*int main() {
+    std::string rawGetRequest = "GET /path/to/resource HTTP/1.1\r\n"
+                                "Host: example.com\r\n"
+                                "Cache-Control: max-stale=60\r\n"
+                                "\r\n";
+
+    HTTPRequestParser parser(rawGetRequest);
+
+    std::cout << "Method: " << parser.getMethod() << std::endl;
+    std::cout << "Request URI: " << parser.getRequestURI() << std::endl;
+    std::cout << "Protocol Version: " << parser.getProtocolVersion() << std::endl;
+    std::cout << "Host Header: " << parser.getHeader("Host") << std::endl;
+    std::cout << "Max-Stale: " << parser.getMaxStale() << std::endl;
+
+    return 0;
+}*/
