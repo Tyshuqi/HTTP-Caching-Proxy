@@ -202,8 +202,37 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
 
 }
 
+void Proxy::processPost(int client_fd, int server_fd, string requestStr)
+{
 
+    // Forward the POST request to the server
+    if (send(server_fd, requestStr.c_str(), requestStr.length(), 0) == -1)
+    {
+        cerr << "Failed to send POST request to server" << endl;
+        close(server_fd);
+        return;
+    }
 
+    // Receive the response from the server
+    char response[MAXDATASIZE];
+    int numbytes = recv(server_fd, response, MAXDATASIZE - 1, 0);
+    if (numbytes == -1)
+    {
+        cerr << "Failed to receive response from server" << endl;
+        close(server_fd);
+        return;
+    }
+    response[numbytes] = '\0';
+
+    // Forward the response back to the client
+    if (send(client_fd, response, numbytes, 0) == -1)
+    {
+        cerr << "Failed to send response back to client" << endl;
+    }
+
+    // Close the server connection
+    close(server_fd);
+}
 
 void Proxy::processRequest(const char *port){
     int client_fd = setupServer(port);
