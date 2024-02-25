@@ -44,5 +44,5 @@ public:
     void processRequest(const char* port);
 
     void parseCacheControlAndExpires(const std::string &cacheControl, const std::string &expiresHeader, CacheEntry &response);
-
+    void runProxy();
 };

@@ -163,7 +163,7 @@ void Proxy::processConnect(int client_fd, int server_fd)
 void Proxy::processGet(int client_fd, int server_fd, string host, string port, string request){
     HTTPRequestParser parsedReq(request);
     int clientMaxStale = parsedReq.getMaxStale();
-    HTTPCache cache;
+    unordered_map<string, string> cache;
     string cacheKey = host + ":" + port;
     // if we can find the response in cache
     if(cache.isValid(cacheKey, clientMaxStale)){
@@ -236,7 +236,7 @@ void Proxy::processPost(int client_fd, int server_fd, string requestStr)
 
 void Proxy::processRequest(const char *port){
     int client_fd = setupServer(port);
-
+    unordered_map<string, string> cache;
     char rawRequest[MAXDATASIZE];
     int numbytes;
     if ((numbytes = recv(client_fd, rawRequest, MAXDATASIZE - 1, 0)) == -1)
@@ -272,4 +272,8 @@ void Proxy::processRequest(const char *port){
     }
 
     close(client_fd);
+}
+
+void Proxy::runProxy(){
+    unordered_map<string, string> cache;
 }
