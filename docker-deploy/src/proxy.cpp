@@ -94,18 +94,21 @@ int Proxy::setupClient(const char *host, const char *port)
         cerr << "client: getaddrinfo:" << gai_strerror(rv) << endl;
         cerr << "host" << host << std::endl;
         cerr << "port" << port << std::endl;
-        exit(EXIT_FAILURE);
+        //exit(EXIT_FAILURE);
+        return -1;
     }
     if ((sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol)) == -1)
     {
         cerr << "client: socket" << endl;
-        exit(EXIT_FAILURE);
+        //exit(EXIT_FAILURE);
+        return -1;
     }
     if (connect(sockfd, servinfo->ai_addr, servinfo->ai_addrlen) == -1)
     {
         close(sockfd);
         cerr << "client: connect" << endl;
-        exit(EXIT_FAILURE);
+        //exit(EXIT_FAILURE);
+        return -1;
     }
     freeaddrinfo(servinfo); // all done with this structure
     return sockfd;
@@ -129,7 +132,8 @@ void Proxy::processConnect(int client_fd, int server_fd){
         if (n < 0)
         {
             cerr << "Select error" << endl;
-            exit(EXIT_FAILURE);
+            //exit(EXIT_FAILURE);
+            return;
         }
 
         if (FD_ISSET(client_fd, &read_fds))

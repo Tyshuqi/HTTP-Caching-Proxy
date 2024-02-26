@@ -115,10 +115,10 @@ void * processRequest(void * user_){
     }
     rawRequest[numbytes] = '\0';
     std::string requestStr(rawRequest);
-
+    //std::cout << "whole request: " << requestStr << std::endl;
     HTTPRequestParser *parse = new HTTPRequestParser(requestStr);
     std::string hostport = parse->getHeader("Host");
-    std::cout << "Host: " << hostport << std::endl; 
+    //std::cout << "Host: " << hostport << std::endl; 
     size_t colonPos = hostport.find(':');
     std::string parseHost;
     std::string parsePort;
@@ -132,7 +132,7 @@ void * processRequest(void * user_){
     }
 
     std::string method = parse->getMethod();
-
+    
     int server_fd = proxy.setupClient(parseHost.c_str(), parsePort.c_str());
 
     if (method == "CONNECT"){
