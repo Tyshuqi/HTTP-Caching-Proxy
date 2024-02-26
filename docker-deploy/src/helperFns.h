@@ -7,6 +7,7 @@
 #include <ctime>
 #include <unordered_map>
 
+extern std::unordered_map<std::string, std::string> cache;
 
 bool isNotExpired(const std::string& rawResponse);
 std::string addIfNoneMatch(const std::string& request);

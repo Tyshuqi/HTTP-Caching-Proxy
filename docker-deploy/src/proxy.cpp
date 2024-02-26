@@ -2,7 +2,6 @@
 #include "HTTPRequestParser.h"
 #include "HTTPResponseParser.h"
 #include "helperFns.h"
-#include "HTTPCache.h"
 #include "user.h"
 
 // #define PORT "12345"  // the port users will be connecting to
@@ -173,29 +172,27 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
     //int clientMaxStale = parsedReq.getMaxStale();
     string etag = parsedReq.getETag();
     string lastmodified = parsedReq.getLastModified();
-
-    unordered_map<string, string> cache;
-    string cacheKey = host + ":" + port;
+    string cacheKey = parsedReq.getRequestURI();
     auto it = cache.find(cacheKey);
-    //bool flag_valid;
-    // Found
+    // if we can find this request in cache
     if (it != cache.end()) 
     {   
         string cached_response = it->second; // Access the value
-        bool flag_valid = isNotExpired(cached_response);  // Check expire or not
+        bool notExpired = isNotExpired(cached_response);  // Check expire or not
         // Intend to check whether there is "no-cache" in cachedResponse
         HTTPResponseParser parsedCachedRes(cached_response);
         string cached_response_cc = parsedCachedRes.getHeader("Cache-Control");  
         // Not Expired, send cached response
-        if(flag_valid && cached_response_cc.find("no-cache") == std::string::npos)
+        if(notExpired)
         {
             std::cout << "in cache, valid" << std::endl;
             send(client_fd, cached_response.c_str(), cached_response.size(), 0);
+            return;
         }
         // Expired, check Etag
         else
         {
-            std::cout << "in cache, requires validation" << std::endl;
+            cout << "in cache, requires validation" << std::endl;
             // Etag exists
             if(!etag.empty())
             {
@@ -209,7 +206,7 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
                 // Last-Modified exists
                 if(!lastmodified.empty()){
                     string request_add_IMS = addIfModifiedSince(request);
-                    std::cout << "Requesting from server" << std::endl;
+                    cout << "Requesting from server" << std::endl;
                     send(server_fd, request_add_IMS.c_str(), request_add_IMS.size(), 0); 
                 }
                 // Both ETag and Last-modified not exists, send request to origin server
@@ -221,15 +218,14 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
             }   
         }
     } 
-    // Key not found, send request to origin server
+    // if we cannot find the request in cache
     else 
     {
         std::cout << "not in cache" << std::endl;
         std::cout << "Requesting from server" << std::endl;
         send(server_fd, request.c_str(), request.size(), 0);
     }       
-
-    // Receive the message from origin server
+    // Receive response from origin server
     char rawRes[MAXDATASIZE];
     int resLen = recv(server_fd, rawRes, sizeof(rawRes), 0);
     // skip some error handling here
@@ -238,6 +234,7 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
     HTTPResponseParser parsedRes(resStr);
     string status = parsedRes.getStatus();
     string cacheControl = parsedRes.getHeader("Cache-Control");
+    string expires = parsedRes.getHeader("Expires");
     std::cout << "Received from server" << std::endl;
     // Check 304 or 200
     // 304, use cached response
@@ -245,10 +242,10 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
         string same_cached_response = it->second; // Access the value
         std::cout << "Responding " << std::endl;
         send(client_fd, same_cached_response.c_str(), same_cached_response.size(), 0);
+        return;
     }
     else
-    {
-        // response is chunked
+    {   // response is chunked
         string completeResponse = resStr; // To assemble chunked response, Initialize complete response with what we've received so far
         if(parsedRes.isChunked()){
             std::cout << "Responding " << std::endl;
@@ -275,8 +272,9 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
         std::cout << "response: " << completeResponse << std::endl;
         // After receiving whole reponse, decide whether cache it or not
         if (cacheControl.find("no-store") == std::string::npos && 
-            cacheControl.find("private") == std::string::npos ){ 
-           // cacheControl.find("no-cache") == std::string::npos) 
+            cacheControl.find("private") == std::string::npos &&
+            (cacheControl != "" || expires != "") &&
+            status == "200"){ 
             cache[cacheKey] = completeResponse; 
         }
     }

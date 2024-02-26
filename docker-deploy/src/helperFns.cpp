@@ -4,6 +4,8 @@
 #include "proxy.h"
 #include "user.h"
 
+std::unordered_map<std::string, std::string> cache;
+
 std::string calculateExpiration(const std::string& dateStr, const std::string& cacheControlStr) {
         std::tm date = parseDate(dateStr);
         int maxAge = parseMaxAge(cacheControlStr);
@@ -156,11 +158,12 @@ void * processRequest(void * user_){
     }
 
     close(user->getSocketFd());
-    return nullptr;
+    delete user;
+    pthread_exit(nullptr);
 }
 
 void runProxy(){
-    std::unordered_map<std::string, std::string> cache;
+    
     Proxy proxy(12345);
     int self_socket_fd = proxy.setupServer("12345");
     int id = 0;
@@ -173,6 +176,7 @@ void runProxy(){
         id++;
         std::cout << "id: " << id << std::endl;
         pthread_create(&newThread, nullptr, processRequest, user);
+        pthread_detach(newThread);
     }
 }
 
