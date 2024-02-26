@@ -137,7 +137,7 @@ void Proxy::processConnect(int client_fd, int server_fd){
             char buf[MAXDATASIZE];
             if ((numbytes = recv(client_fd, buf, MAXDATASIZE - 1, 0)) <= 0)
             {
-                cerr << "CONNNECT METHOD: recv original client failed" << endl;
+                cerr << "Tunnel closed" << endl;
                 return;
             }
             else
@@ -152,7 +152,7 @@ void Proxy::processConnect(int client_fd, int server_fd){
             char buf[MAXDATASIZE];
             if ((numbytes = recv(server_fd, buf, MAXDATASIZE - 1, 0)) <= 0)
             {
-                cerr << "CONNNECT METHOD: recv original server failed" << endl;
+                cerr << "Tunnel closed" << endl;
                 return;
             }
             else
@@ -185,15 +185,18 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
         // Not Expired, send cached response
         if(flag_valid && cached_response_cc.find("no-cache") == std::string::npos)
         {
+            std::cout << "in cache, valid" << std::endl;
             send(client_fd, cached_response.c_str(), cached_response.size(), 0);
         }
         // Expired, check Etag
         else
         {
+            std::cout << "in cache, requires validation" << std::endl;
             // Etag exists
             if(!etag.empty())
             {
                 string request_add_INM = addIfNoneMatch(request);
+                std::cout << "Requesting from server" << std::endl;
                 send(server_fd, request_add_INM.c_str(), request_add_INM.size(), 0);
             }
             // Etag not exists, check Last-Modified
@@ -202,12 +205,14 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
                 // Last-Modified exists
                 if(!lastmodified.empty()){
                     string request_add_IMS = addIfModifiedSince(request);
+                    std::cout << "Requesting from server" << std::endl;
                     send(server_fd, request_add_IMS.c_str(), request_add_IMS.size(), 0); 
                 }
                 // Both ETag and Last-modified not exists, send request to origin server
                 else
                 {
-                     send(server_fd, request.c_str(), request.size(), 0); 
+                    std::cout << "Requesting from server" << std::endl;
+                    send(server_fd, request.c_str(), request.size(), 0); 
                 }
             }   
         }
@@ -215,9 +220,10 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
     // Key not found, send request to origin server
     else 
     {
+        std::cout << "not in cache" << std::endl;
+        std::cout << "Requesting from server" << std::endl;
         send(server_fd, request.c_str(), request.size(), 0);
     }       
-        //send(server_fd, request.c_str(), request.size(), 0); 
 
     // Receive the message from origin server
     char rawRes[MAXDATASIZE];
@@ -228,10 +234,12 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
     HTTPResponseParser parsedRes(resStr);
     string status = parsedRes.getStatus();
     string cacheControl = parsedRes.getHeader("Cache-Control");
+    std::cout << "Received from server" << std::endl;
     // Check 304 or 200
     // 304, use cached response
     if(status == "304"){
         string same_cached_response = it->second; // Access the value
+        std::cout << "Responding " << std::endl;
         send(client_fd, same_cached_response.c_str(), same_cached_response.size(), 0);
     }
     else
@@ -239,6 +247,7 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
         // response is chunked
         string completeResponse = resStr; // To assemble chunked response, Initialize complete response with what we've received so far
         if(parsedRes.isChunked()){
+            std::cout << "Responding " << std::endl;
             send(client_fd, rawRes, resLen, 0);
             char chunkedRes[MAXDATASIZE];
             while(true){
@@ -248,6 +257,7 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
                 }
                 completeResponse.append(chunkedRes, chunkedResLen);
                 chunkedRes[chunkedResLen] = '\0';
+                std::cout << "Responding " << std::endl;
                 send(client_fd, chunkedRes, chunkedResLen, 0);
             }
             // need code to store it in cache
@@ -255,6 +265,7 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
         // Not chunked
         else{ 
             std::cout << "not chunked." << std::endl;
+            std::cout << "Responding " << std::endl;
             send(client_fd, rawRes, resLen, 0);
         }
         std::cout << "response: " << completeResponse << std::endl;
