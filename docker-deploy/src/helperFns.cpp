@@ -1,4 +1,8 @@
 #include "helperFns.h"
+#include "HTTPResponseParser.h"
+#include "HTTPRequestParser.h"
+#include "proxy.h"
+#include "user.h"
 
 std::string calculateExpiration(const std::string& dateStr, const std::string& cacheControlStr) {
         std::tm date = parseDate(dateStr);
@@ -99,7 +103,81 @@ std::string addIfModifiedSince(const std::string& request){
     return ans;
 }
 
-int main() {
+void * processRequest(void * user_){
+    Proxy proxy(12345);
+    User * user = (User *) user_;
+    char rawRequest[65536];
+    int numbytes;
+    if ((numbytes = recv(user->getSocketFd() , rawRequest, 65536 - 1, 0)) == -1)
+    {
+        std::cerr << " No Request" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    rawRequest[numbytes] = '\0';
+    std::string requestStr(rawRequest);
+
+    HTTPRequestParser *parse = new HTTPRequestParser(requestStr);
+    std::string hostport = parse->getHeader("Host");
+    std::cout << "Host: " << hostport << std::endl; 
+    size_t colonPos = hostport.find(':');
+    std::string parseHost;
+    std::string parsePort;
+    if(colonPos != std::string::npos){
+        parseHost = hostport.substr(0, colonPos);  // Get the substring before the colon
+        parsePort = hostport.substr(colonPos + 1); // Get the substring after the colon
+    }
+    else{
+        parseHost = hostport;
+        parsePort = "80";
+    }
+
+    std::string method = parse->getMethod();
+
+    int server_fd = proxy.setupClient(parseHost.c_str(), parsePort.c_str());
+
+    if (method == "CONNECT"){
+        std::cout << "go into CONNECT" << std::endl;
+        proxy.processConnect(user->getSocketFd(), server_fd);
+        std::cout << "CONNECT end" << std::endl;
+    }
+
+    // POST
+    else if (method == "POST"){
+        std::cout << "go into POST" << std::endl;
+        proxy.processPost(user->getSocketFd(), server_fd, requestStr);
+        std::cout << "POST end" << std::endl;
+    }
+    
+    // GET
+    else if (method == "GET"){
+        std::cout << "go into GET" << std::endl;
+        proxy.processGet(user->getSocketFd(), server_fd, parseHost, parsePort, requestStr);
+        std::cout << "GET end" << std::endl;
+    }
+
+    close(user->getSocketFd());
+    return nullptr;
+}
+
+void runProxy(){
+    std::unordered_map<std::string, std::string> cache;
+    Proxy proxy(12345);
+    int self_socket_fd = proxy.setupServer("12345");
+    int id = 0;
+    int client_fd;
+    while(true){
+        
+        client_fd = proxy.acceptUser(self_socket_fd);
+        User * user = new User(id, client_fd);
+        pthread_t newThread;
+        id++;
+        std::cout << "id: " << id << std::endl;
+        pthread_create(&newThread, nullptr, processRequest, user);
+    }
+}
+
+
+/*int main() {
     std::string httpResponse =
         "HTTP/1.1 200 OK\r\n"
         "Date: Thu, 24 Feb 2024 19:22:00 GMT\r\n"
@@ -123,7 +201,6 @@ int main() {
     std::string rawRequest = "GET /example/resource HTTP/1.1\r\n"
                              "Host: example.com\r\n"
                              "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:100.0) Gecko/20100101 Firefox/100.0\r\n"
-                             "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\n"
                              "ETag: \"abcdef1234567890\"\r\n"
                              "Last-Modified: Sat, 01 Jan 2022 12:00:00 GMT\r\n"
                              "Connection: keep-alive\r\n\r\n";
@@ -139,4 +216,4 @@ int main() {
     std::cout << "match:" << match << std::endl;
     std::cout << "modify:" << modify << std::endl;
     return 0;
-}
+}*/

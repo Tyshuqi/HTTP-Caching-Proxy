@@ -1,3 +1,6 @@
+#ifndef HTTP_CACHE_H
+#define HTTP_CACHE_H
+
 #include <unordered_map>
 #include <string>
 #include <chrono>
@@ -60,3 +63,5 @@ public:
         cache[key] = entry;
     }
 };
+
+#endif

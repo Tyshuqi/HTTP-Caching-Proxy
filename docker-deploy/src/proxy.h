@@ -1,3 +1,7 @@
+#ifndef PROXY_H
+#define PROXY_H
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,7 +17,6 @@
 #include <iostream>
 #include <cstring>
 #include <cstdlib>
-#include "HTTPCache.h"
 
 class Proxy{
 public:
@@ -36,13 +39,12 @@ public:
     }
 
     int setupServer(const char* port);
+    int acceptUser(int self_socket_fd);
     int setupClient(const char* host, const char* port);
     
     void processConnect(int client_fd, int server_fd);
     void processPost(int client_fd, int server_fd, std::string requestStr);
     void processGet(int client_fd, int server_fd, std::string host, std::string port, std::string request);
-    void processRequest(const char* port);
-
-    void parseCacheControlAndExpires(const std::string &cacheControl, const std::string &expiresHeader, CacheEntry &response);
-    void runProxy();
 };
+
+#endif

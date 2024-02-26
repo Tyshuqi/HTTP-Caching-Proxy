@@ -1,6 +1,9 @@
 #include "proxy.h"
 #include "HTTPRequestParser.h"
 #include "HTTPResponseParser.h"
+#include "helperFns.h"
+#include "HTTPCache.h"
+#include "user.h"
 
 // #define PORT "12345"  // the port users will be connecting to
 #define BACKLOG 10 // how many pending connections queue will hold
@@ -10,13 +13,9 @@ using namespace std;
 
 int Proxy::setupServer(const char *port)
 {
-    int sockfd, client_fd;              // listen on sock_fd, new connection on new_fd
+    int self_socket_fd;             // listen on sock_fd, new connection on new_fd
     struct addrinfo hints, *servinfo;   // *p;
-    struct sockaddr_storage their_addr; // connector's address information
-    socklen_t sin_size;
-    struct sigaction sa;
     int yes = 1;
-    char s[INET6_ADDRSTRLEN];
     int rv;
 
     memset(&hints, 0, sizeof hints);
@@ -30,19 +29,19 @@ int Proxy::setupServer(const char *port)
         exit(EXIT_FAILURE);
     }
 
-    if ((sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol)) == -1)
+    if ((self_socket_fd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol)) == -1)
     {
         cerr << "server: socket" << endl;
         exit(EXIT_FAILURE);
     }
 
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
+    if (setsockopt(self_socket_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
     {
         cerr << "server: setsockopt" << endl;
         exit(EXIT_FAILURE);
     }
 
-    if (bind(sockfd, servinfo->ai_addr, servinfo->ai_addrlen) == -1)
+    if (bind(self_socket_fd, servinfo->ai_addr, servinfo->ai_addrlen) == -1)
     {
         cerr << "server: bind" << endl;
         exit(EXIT_FAILURE);
@@ -50,17 +49,22 @@ int Proxy::setupServer(const char *port)
 
     freeaddrinfo(servinfo); // all done with this structure
 
-    if (listen(sockfd, BACKLOG) == -1)
+    if (listen(self_socket_fd, BACKLOG) == -1)
     {
         cerr << "server: listen" << endl;
         exit(EXIT_FAILURE);
     }
 
-    // while (1)
-    // { // main accept() loop
-    sin_size = sizeof their_addr;
+    return self_socket_fd;
+}
+
+int Proxy::acceptUser(int self_socket_fd){
+    char s[INET6_ADDRSTRLEN];
+    int client_fd;
+    struct sockaddr_storage their_addr; // connector's address information
+    socklen_t sin_size = sizeof(their_addr);
     //*********** accept **********//
-    client_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
+    client_fd = accept(self_socket_fd, (struct sockaddr *)&their_addr, &sin_size);
     if (client_fd == -1)
     {
         cerr << "server: accept error" << endl;
@@ -76,19 +80,20 @@ int Proxy::setupServer(const char *port)
 
 int Proxy::setupClient(const char *host, const char *port)
 {
-    int sockfd, numbytes;
+    int sockfd;
     // char buf[MAXDATASIZE];
     struct addrinfo hints, *servinfo; //*p;
     int rv;
-    char s[INET6_ADDRSTRLEN];
 
-    memset(&hints, 0, sizeof hints);
+    memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
     if ((rv = getaddrinfo(host, port, &hints, &servinfo)) != 0)
     {
         cerr << "client: getaddrinfo:" << gai_strerror(rv) << endl;
+        cerr << "host" << host << std::endl;
+        cerr << "port" << port << std::endl;
         exit(EXIT_FAILURE);
     }
     if ((sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol)) == -1)
@@ -107,8 +112,7 @@ int Proxy::setupClient(const char *host, const char *port)
 }
 
 // If multi thread, stll need a parameter "id"
-void Proxy::processConnect(int client_fd, int server_fd)
-{
+void Proxy::processConnect(int client_fd, int server_fd){
     send(client_fd, "HTTP/1.1 200 OK\r\n\r\n", 19, 0);
     fd_set read_fds;
     int numbytes;
@@ -131,10 +135,10 @@ void Proxy::processConnect(int client_fd, int server_fd)
         if (FD_ISSET(client_fd, &read_fds))
         {
             char buf[MAXDATASIZE];
-            if ((numbytes = recv(client_fd, buf, MAXDATASIZE - 1, 0)) == -1)
+            if ((numbytes = recv(client_fd, buf, MAXDATASIZE - 1, 0)) <= 0)
             {
                 cerr << "CONNNECT METHOD: recv original client failed" << endl;
-                exit(EXIT_FAILURE);
+                return;
             }
             else
             {
@@ -146,10 +150,10 @@ void Proxy::processConnect(int client_fd, int server_fd)
         if (FD_ISSET(server_fd, &read_fds))
         {
             char buf[MAXDATASIZE];
-            if ((numbytes = recv(server_fd, buf, MAXDATASIZE - 1, 0)) == -1)
+            if ((numbytes = recv(server_fd, buf, MAXDATASIZE - 1, 0)) <= 0)
             {
                 cerr << "CONNNECT METHOD: recv original server failed" << endl;
-                exit(EXIT_FAILURE);
+                return;
             }
             else
             {
@@ -162,25 +166,78 @@ void Proxy::processConnect(int client_fd, int server_fd)
 
 void Proxy::processGet(int client_fd, int server_fd, string host, string port, string request){
     HTTPRequestParser parsedReq(request);
-    int clientMaxStale = parsedReq.getMaxStale();
+    //int clientMaxStale = parsedReq.getMaxStale();
+    string etag = parsedReq.getETag();
+    string lastmodified = parsedReq.getLastModified();
+
     unordered_map<string, string> cache;
     string cacheKey = host + ":" + port;
-    // if we can find the response in cache
-    if(cache.isValid(cacheKey, clientMaxStale)){
-        string cachedResponse = cache.get(cacheKey);
-        send(client_fd, cachedResponse.c_str(), cachedResponse.size(), 0);
+    auto it = cache.find(cacheKey);
+    //bool flag_valid;
+    // Found
+    if (it != cache.end()) 
+    {   
+        string cached_response = it->second; // Access the value
+        bool flag_valid = isNotExpired(cached_response);  // Check expire or not
+        // Intend to check whether there is "no-cache" in cachedResponse
+        HTTPResponseParser parsedCachedRes(cached_response);
+        string cached_response_cc = parsedCachedRes.getHeader("Cache-Control");  
+        // Not Expired, send cached response
+        if(flag_valid && cached_response_cc.find("no-cache") == std::string::npos)
+        {
+            send(client_fd, cached_response.c_str(), cached_response.size(), 0);
+        }
+        // Expired, check Etag
+        else
+        {
+            // Etag exists
+            if(!etag.empty())
+            {
+                string request_add_INM = addIfNoneMatch(request);
+                send(server_fd, request_add_INM.c_str(), request_add_INM.size(), 0);
+            }
+            // Etag not exists, check Last-Modified
+            else
+            {
+                // Last-Modified exists
+                if(!lastmodified.empty()){
+                    string request_add_IMS = addIfModifiedSince(request);
+                    send(server_fd, request_add_IMS.c_str(), request_add_IMS.size(), 0); 
+                }
+                // Both ETag and Last-modified not exists, send request to origin server
+                else
+                {
+                     send(server_fd, request.c_str(), request.size(), 0); 
+                }
+            }   
+        }
+    } 
+    // Key not found, send request to origin server
+    else 
+    {
+        send(server_fd, request.c_str(), request.size(), 0);
+    }       
+        //send(server_fd, request.c_str(), request.size(), 0); 
+
+    // Receive the message from origin server
+    char rawRes[MAXDATASIZE];
+    int resLen = recv(server_fd, rawRes, sizeof(rawRes), 0);
+    // skip some error handling here
+    rawRes[resLen] = '\0';
+    string resStr(rawRes);
+    HTTPResponseParser parsedRes(resStr);
+    string status = parsedRes.getStatus();
+    string cacheControl = parsedRes.getHeader("Cache-Control");
+    // Check 304 or 200
+    // 304, use cached response
+    if(status == "304"){
+        string same_cached_response = it->second; // Access the value
+        send(client_fd, same_cached_response.c_str(), same_cached_response.size(), 0);
     }
-    else{ // if there is no response in cache
-        // send request to origin server
-        send(server_fd, request.c_str(), request.size(), 0); 
-        // then, get ready to receive the message from origin server
-        char rawRes[MAXDATASIZE];
-        int resLen = recv(server_fd, rawRes, sizeof(rawRes), 0);
-        // skip some error handling here
-        rawRes[resLen] = '\0';
-        string resStr(rawRes);
-        HTTPResponseParser parsedRes(resStr);
-        // if the response is chunked
+    else
+    {
+        // response is chunked
+        string completeResponse = resStr; // To assemble chunked response, Initialize complete response with what we've received so far
         if(parsedRes.isChunked()){
             send(client_fd, rawRes, resLen, 0);
             char chunkedRes[MAXDATASIZE];
@@ -189,24 +246,31 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
                 if(chunkedResLen <= 0){
                     break;
                 }
+                completeResponse.append(chunkedRes, chunkedResLen);
                 chunkedRes[chunkedResLen] = '\0';
                 send(client_fd, chunkedRes, chunkedResLen, 0);
             }
             // need code to store it in cache
         }
-        else{ // if the response is not chunked
+        // Not chunked
+        else{ 
+            std::cout << "not chunked." << std::endl;
             send(client_fd, rawRes, resLen, 0);
-            // need code to store it in cache
+        }
+        std::cout << "response: " << completeResponse << std::endl;
+        // After receiving whole reponse, decide whether cache it or not
+        if (cacheControl.find("no-store") == std::string::npos && 
+            cacheControl.find("private") == std::string::npos ){ 
+           // cacheControl.find("no-cache") == std::string::npos) 
+            cache[cacheKey] = completeResponse; 
         }
     }
-
 }
 
-void Proxy::processPost(int client_fd, int server_fd, string requestStr)
-{
+void Proxy::processPost(int client_fd, int server_fd, string requestStr){
 
     // Forward the POST request to the server
-    if (send(server_fd, requestStr.c_str(), requestStr.length(), 0) == -1)
+    if (send(server_fd, requestStr.c_str(), requestStr.length(), 0) <= 0)
     {
         cerr << "Failed to send POST request to server" << endl;
         close(server_fd);
@@ -216,7 +280,7 @@ void Proxy::processPost(int client_fd, int server_fd, string requestStr)
     // Receive the response from the server
     char response[MAXDATASIZE];
     int numbytes = recv(server_fd, response, MAXDATASIZE - 1, 0);
-    if (numbytes == -1)
+    if (numbytes <= 0)
     {
         cerr << "Failed to receive response from server" << endl;
         close(server_fd);
@@ -225,55 +289,11 @@ void Proxy::processPost(int client_fd, int server_fd, string requestStr)
     response[numbytes] = '\0';
 
     // Forward the response back to the client
-    if (send(client_fd, response, numbytes, 0) == -1)
+    if (send(client_fd, response, numbytes, 0) <= 0)
     {
         cerr << "Failed to send response back to client" << endl;
     }
 
     // Close the server connection
     close(server_fd);
-}
-
-void Proxy::processRequest(const char *port){
-    int client_fd = setupServer(port);
-    unordered_map<string, string> cache;
-    char rawRequest[MAXDATASIZE];
-    int numbytes;
-    if ((numbytes = recv(client_fd, rawRequest, MAXDATASIZE - 1, 0)) == -1)
-    {
-        cerr << " No Request" << endl;
-        exit(EXIT_FAILURE);
-    }
-    rawRequest[numbytes] = '\0';
-    string requestStr(rawRequest);
-
-    HTTPRequestParser *parse = new HTTPRequestParser(requestStr);
-    string hostport = parse->getHeader("Host");
-    size_t colonPos = hostport.find(':');
-    string parseHost = hostport.substr(0, colonPos);  // Get the substring before the colon
-    string parsePort = hostport.substr(colonPos + 1); // Get the substring after the colon
-
-    string method = parse->getMethod();
-
-    int server_fd = setupClient(parseHost.c_str(), parsePort.c_str());
-
-    if (method == "CONNECT"){
-        processConnect(client_fd, server_fd);
-    }
-
-    // POST
-    else if (method == "POST"){
-        processPost(client_fd, server_fd, requestStr);
-    }
-    
-    // GET
-     else if (method == "GET"){
-        processGet(client_fd, server_fd, parseHost, parsePort, requestStr);
-    }
-
-    close(client_fd);
-}
-
-void Proxy::runProxy(){
-    unordered_map<string, string> cache;
 }

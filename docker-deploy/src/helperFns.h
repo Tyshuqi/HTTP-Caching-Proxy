@@ -1,14 +1,19 @@
+#ifndef HELPER_FNS_H
+#define HELPER_FNS_H
+
 #include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <ctime>
-#include "HTTPResponseParser.h"
-#include "HTTPRequestParser.h"
+#include <unordered_map>
+
 
 bool isNotExpired(const std::string& rawResponse);
 std::string addIfNoneMatch(const std::string& request);
 std::string addIfModifiedSince(const std::string& request);
 
+void runProxy();
+void * processRequest(void * user_);
 
 
 // implementation
@@ -19,3 +24,4 @@ std::string formatDate(std::time_t time);
 std::string calculateExpiration(const std::string& dateStr, const std::string& cacheControlStr);
 bool compareCurrAndExpires(const std::string& expirationTime);
 
+#endif

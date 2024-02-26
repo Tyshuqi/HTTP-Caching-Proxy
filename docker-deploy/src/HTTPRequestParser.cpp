@@ -69,6 +69,15 @@ int HTTPRequestParser::getMaxStale() const{
     }
 }
 
+std::string HTTPRequestParser::getETag() const {
+    return getHeader("ETag");
+}
+
+std::string HTTPRequestParser::getLastModified() const {
+    return getHeader("Last-Modified");
+}
+
+
 /*int main() {
     std::string rawGetRequest = "GET /path/to/resource HTTP/1.1\r\n"
                                 "Host: example.com\r\n"
