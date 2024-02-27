@@ -57,7 +57,7 @@ int Proxy::setupServer(const char *port)
     return self_socket_fd;
 }
 
-int Proxy::acceptUser(int self_socket_fd){
+int Proxy::acceptUser(int self_socket_fd, std::string & client_ip){
     char s[INET6_ADDRSTRLEN];
     int client_fd;
     struct sockaddr_storage their_addr; // connector's address information
@@ -67,13 +67,10 @@ int Proxy::acceptUser(int self_socket_fd){
     if (client_fd == -1)
     {
         cerr << "server: accept error" << endl;
-        // continue;
     }
     const char *ip = get_in_addr((struct sockaddr *)&their_addr, s, sizeof(s));
     printf("server: got connection from %s\n", ip);
-
-    // close(client_fd);
-    // }
+    client_ip = ip;
     return client_fd;
 }
 
@@ -114,7 +111,8 @@ int Proxy::setupClient(const char *host, const char *port)
 }
 
 // If multi thread, stll need a parameter "id"
-void Proxy::processConnect(int client_fd, int server_fd){
+void Proxy::processConnect(int client_fd, int server_fd, User * user){
+    cout << user->getID() << ": Responding \"HTTP/1.1 200 OK\"" << endl;
     send(client_fd, "HTTP/1.1 200 OK\r\n\r\n", 19, 0);
     fd_set read_fds;
     int numbytes;
@@ -140,7 +138,7 @@ void Proxy::processConnect(int client_fd, int server_fd){
             char buf[MAXDATASIZE];
             if ((numbytes = recv(client_fd, buf, MAXDATASIZE - 1, 0)) <= 0)
             {
-                cerr << "Tunnel closed" << endl;
+                cerr << user->getID() << ": Tunnel closed" << endl;
                 return;
             }
             else
@@ -155,7 +153,7 @@ void Proxy::processConnect(int client_fd, int server_fd){
             char buf[MAXDATASIZE];
             if ((numbytes = recv(server_fd, buf, MAXDATASIZE - 1, 0)) <= 0)
             {
-                cerr << "Tunnel closed" << endl;
+                cerr << user->getID() << ": Tunnel closed" << endl;
                 return;
             }
             else
@@ -167,7 +165,7 @@ void Proxy::processConnect(int client_fd, int server_fd){
     }
 }
 
-void Proxy::processGet(int client_fd, int server_fd, string host, string port, string request){
+void Proxy::processGet(int client_fd, int server_fd, string host, string port, string request, User * user){
     HTTPRequestParser parsedReq(request);
     //int clientMaxStale = parsedReq.getMaxStale();
     string etag = parsedReq.getETag();
@@ -185,19 +183,20 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
         // Not Expired, send cached response
         if(notExpired)
         {
-            std::cout << "in cache, valid" << std::endl;
+            std::cout << user->getID() << ": in cache, valid" << std::endl;
+            cout << user->getID() << ": Responding \"" << getFirstLine(cached_response) << "\"" << endl;
             send(client_fd, cached_response.c_str(), cached_response.size(), 0);
             return;
         }
         // Expired, check Etag
         else
         {
-            cout << "in cache, requires validation" << std::endl;
+            cout << user->getID() << ": in cache, requires validation" << std::endl;
             // Etag exists
             if(!etag.empty())
             {
                 string request_add_INM = addIfNoneMatch(request);
-                std::cout << "Requesting from server" << std::endl;
+                cout << user->getID() << ": Requesting \"" << getFirstLine(request_add_INM) << "\" from " << host << endl;
                 send(server_fd, request_add_INM.c_str(), request_add_INM.size(), 0);
             }
             // Etag not exists, check Last-Modified
@@ -206,13 +205,13 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
                 // Last-Modified exists
                 if(!lastmodified.empty()){
                     string request_add_IMS = addIfModifiedSince(request);
-                    cout << "Requesting from server" << std::endl;
+                    cout << user->getID() << ": Requesting \"" << getFirstLine(request_add_IMS) << "\" from " << host << endl;
                     send(server_fd, request_add_IMS.c_str(), request_add_IMS.size(), 0); 
                 }
                 // Both ETag and Last-modified not exists, send request to origin server
                 else
                 {
-                    std::cout << "Requesting from server" << std::endl;
+                    cout << user->getID() << ": Requesting \"" << getFirstLine(request) << "\" from " << host << endl;
                     send(server_fd, request.c_str(), request.size(), 0); 
                 }
             }   
@@ -221,8 +220,8 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
     // if we cannot find the request in cache
     else 
     {
-        std::cout << "not in cache" << std::endl;
-        std::cout << "Requesting from server" << std::endl;
+        std::cout << user->getID() << ": not in cache" << std::endl;
+        cout << user->getID() << ": Requesting \"" << getFirstLine(request) << "\" from " << host << endl;
         send(server_fd, request.c_str(), request.size(), 0);
     }       
     // Receive response from origin server
@@ -240,7 +239,7 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
     // 304, use cached response
     if(status == "304"){
         string same_cached_response = it->second; // Access the value
-        std::cout << "Responding " << std::endl;
+        cout << user->getID() << ": Responding \"" << getFirstLine(same_cached_response) << "\"" << endl;
         send(client_fd, same_cached_response.c_str(), same_cached_response.size(), 0);
         return;
     }
@@ -266,10 +265,9 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
         // Not chunked
         else{ 
             std::cout << "not chunked." << std::endl;
-            std::cout << "Responding " << std::endl;
+            cout << user->getID() << ": Responding \"" << getFirstLine(resStr) << "\"" << endl;
             send(client_fd, rawRes, resLen, 0);
         }
-        std::cout << "response: " << completeResponse << std::endl;
         // After receiving whole reponse, decide whether cache it or not
         if (cacheControl.find("no-store") == std::string::npos && 
             cacheControl.find("private") == std::string::npos &&
@@ -280,7 +278,7 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
     }
 }
 
-void Proxy::processPost(int client_fd, int server_fd, string requestStr){
+void Proxy::processPost(int client_fd, int server_fd, string requestStr, User * user){
 
     // Forward the POST request to the server
     if (send(server_fd, requestStr.c_str(), requestStr.length(), 0) <= 0)
@@ -289,7 +287,7 @@ void Proxy::processPost(int client_fd, int server_fd, string requestStr){
         close(server_fd);
         return;
     }
-
+    cout << user->getID() << ": Requesting \"" << getFirstLine(requestStr) << "\" from " << endl;
     // Receive the response from the server
     char response[MAXDATASIZE];
     int numbytes = recv(server_fd, response, MAXDATASIZE - 1, 0);
@@ -300,13 +298,13 @@ void Proxy::processPost(int client_fd, int server_fd, string requestStr){
         return;
     }
     response[numbytes] = '\0';
-
+    string resp = response;
     // Forward the response back to the client
     if (send(client_fd, response, numbytes, 0) <= 0)
     {
         cerr << "Failed to send response back to client" << endl;
     }
-
+    cout << user->getID() << ": Responding \"" << getFirstLine(resp) << "\"" << endl;
     // Close the server connection
     close(server_fd);
 }

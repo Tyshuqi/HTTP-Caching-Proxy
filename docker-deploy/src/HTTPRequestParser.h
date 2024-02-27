@@ -30,8 +30,8 @@ public:
 
     int getMaxStale() const;
 
-    //Add by ssq, 02/25
     std::string getETag() const;
+
     std::string getLastModified() const;
 
 };

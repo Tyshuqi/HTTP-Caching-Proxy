@@ -6,6 +6,12 @@
 
 std::unordered_map<std::string, std::string> cache;
 
+std::string getFirstLine(std::string& msg){
+    size_t firstLineEnd = msg.find("\r\n");
+    std::string firstLine = msg.substr(0, firstLineEnd);
+    return firstLine;
+}
+
 std::string calculateExpiration(const std::string& dateStr, const std::string& cacheControlStr) {
         std::tm date = parseDate(dateStr);
         int maxAge = parseMaxAge(cacheControlStr);
@@ -117,10 +123,10 @@ void * processRequest(void * user_){
     }
     rawRequest[numbytes] = '\0';
     std::string requestStr(rawRequest);
-    //std::cout << "whole request: " << requestStr << std::endl;
+    user->setREQUEST(getFirstLine(requestStr));
+    std::cout << user->getID() << ": \"" << user->getREQUEST() << "\" " << "from " << user->getIP() << " @ " << user->getTIME();  
     HTTPRequestParser *parse = new HTTPRequestParser(requestStr);
     std::string hostport = parse->getHeader("Host");
-    //std::cout << "Host: " << hostport << std::endl; 
     size_t colonPos = hostport.find(':');
     std::string parseHost;
     std::string parsePort;
@@ -138,23 +144,17 @@ void * processRequest(void * user_){
     int server_fd = proxy.setupClient(parseHost.c_str(), parsePort.c_str());
 
     if (method == "CONNECT"){
-        std::cout << "go into CONNECT" << std::endl;
-        proxy.processConnect(user->getSocketFd(), server_fd);
-        std::cout << "CONNECT end" << std::endl;
+        proxy.processConnect(user->getSocketFd(), server_fd, user);
     }
 
     // POST
     else if (method == "POST"){
-        std::cout << "go into POST" << std::endl;
-        proxy.processPost(user->getSocketFd(), server_fd, requestStr);
-        std::cout << "POST end" << std::endl;
+        proxy.processPost(user->getSocketFd(), server_fd, requestStr, user);
     }
     
     // GET
     else if (method == "GET"){
-        std::cout << "go into GET" << std::endl;
-        proxy.processGet(user->getSocketFd(), server_fd, parseHost, parsePort, requestStr);
-        std::cout << "GET end" << std::endl;
+        proxy.processGet(user->getSocketFd(), server_fd, parseHost, parsePort, requestStr, user);
     }
 
     close(user->getSocketFd());
@@ -169,12 +169,11 @@ void runProxy(){
     int id = 0;
     int client_fd;
     while(true){
-        
-        client_fd = proxy.acceptUser(self_socket_fd);
-        User * user = new User(id, client_fd);
+        std::string client_ip;
+        client_fd = proxy.acceptUser(self_socket_fd, client_ip);
+        User * user = new User(id, client_fd, client_ip);
         pthread_t newThread;
         id++;
-        std::cout << "id: " << id << std::endl;
         pthread_create(&newThread, nullptr, processRequest, user);
         pthread_detach(newThread);
     }

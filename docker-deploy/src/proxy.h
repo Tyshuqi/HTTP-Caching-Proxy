@@ -17,6 +17,7 @@
 #include <iostream>
 #include <cstring>
 #include <cstdlib>
+#include "user.h"
 
 class Proxy{
 public:
@@ -39,12 +40,12 @@ public:
     }
 
     int setupServer(const char* port);
-    int acceptUser(int self_socket_fd);
+    int acceptUser(int self_socket_fd, std::string & client_ip);
     int setupClient(const char* host, const char* port);
     
-    void processConnect(int client_fd, int server_fd);
-    void processPost(int client_fd, int server_fd, std::string requestStr);
-    void processGet(int client_fd, int server_fd, std::string host, std::string port, std::string request);
+    void processConnect(int client_fd, int server_fd, User * user);
+    void processPost(int client_fd, int server_fd, std::string requestStr, User * user);
+    void processGet(int client_fd, int server_fd, std::string host, std::string port, std::string request, User * user);
 };
 
 #endif

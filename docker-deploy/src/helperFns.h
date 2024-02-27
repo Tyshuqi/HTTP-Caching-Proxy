@@ -12,10 +12,10 @@ extern std::unordered_map<std::string, std::string> cache;
 bool isNotExpired(const std::string& rawResponse);
 std::string addIfNoneMatch(const std::string& request);
 std::string addIfModifiedSince(const std::string& request);
+std::string getFirstLine(std::string& msg);
 
 void runProxy();
 void * processRequest(void * user_);
-
 
 // implementation
 std::tm parseDate(const std::string& dateStr);
