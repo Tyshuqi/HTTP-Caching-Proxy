@@ -324,9 +324,10 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
             resCC.find("private") == std::string::npos &&
             (resCC != "" || expires != "") &&
             status == "200" &&
-            reqCC.find("no-store") == std::string::npos)
-        {
-            cache[cacheKey] = completeResponse;
+            reqCC.find("no-store") == std::string::npos){ 
+                pthread_mutex_lock(&threadLock);   
+                cache[cacheKey] = completeResponse; 
+                pthread_mutex_unlock(&threadLock); 
         }
     }
 }
