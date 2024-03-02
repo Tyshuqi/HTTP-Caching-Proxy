@@ -70,6 +70,22 @@ std::string calculateExpiration(const std::string& dateStr, const std::string& c
         }
     }
 
+std::string getExpiredTime(const std::string& resStr){
+    HTTPResponseParser responseParser(resStr);
+    std::string CC = responseParser.getHeader("Cache-Control");
+    std::string Expires = responseParser.getHeader("Expires");
+    std::string Date = responseParser.getHeader("Date");
+    if(CC != ""){
+        return calculateExpiration(Date, CC, "");
+    }
+    else if(Expires != ""){
+        return Expires;
+    }
+    else{
+        return "Cannot get expired time";
+    }
+}
+
 std::tm parseDate(const std::string& dateStr) {
         std::tm date = {};
         std::istringstream ss(dateStr);
@@ -120,7 +136,7 @@ bool isNotExpired(const std::string& rawResponse, const std::string& rawRequest)
     if(responseParser.getHeader("Cache-Control") != ""){
         return compareCurrAndExpires(calculateExpiration(responseParser.getHeader("Date"), responseParser.getHeader("Cache-Control"), requestParser.getHeader("Cache-Control")));
     }
-    else if(responseParser.getHeader("Expires") != ""){
+    else if(Expires != ""){
         return compareCurrAndExpires(Expires);
     }
     else{

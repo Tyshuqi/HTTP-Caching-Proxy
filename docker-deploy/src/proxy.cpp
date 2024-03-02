@@ -68,7 +68,7 @@ int Proxy::acceptUser(int self_socket_fd, std::string & client_ip){
         cerr << "server: accept error" << endl;
     }
     const char *ip = get_in_addr((struct sockaddr *)&their_addr, s, sizeof(s));
-    printf("server: got connection from %s\n", ip);
+    //printf("server: got connection from %s\n", ip);
     client_ip = ip;
     return client_fd;
 }
@@ -138,7 +138,9 @@ void Proxy::processConnect(int client_fd, int server_fd, User * user){
             char buf[MAXDATASIZE];
             if ((numbytes = recv(client_fd, buf, MAXDATASIZE - 1, 0)) <= 0)
             {
-                cerr << user->getID() << ": Tunnel closed" << endl;
+                pthread_mutex_lock(&threadLock);
+                logfile << user->getID() << ": Tunnel closed" << endl;
+                pthread_mutex_unlock(&threadLock);
                 return;
             }
             else
@@ -153,7 +155,9 @@ void Proxy::processConnect(int client_fd, int server_fd, User * user){
             char buf[MAXDATASIZE];
             if ((numbytes = recv(server_fd, buf, MAXDATASIZE - 1, 0)) <= 0)
             {
-                cerr << user->getID() << ": Tunnel closed" << endl;
+                pthread_mutex_lock(&threadLock);
+                logfile << user->getID() << ": Tunnel closed" << endl;
+                pthread_mutex_unlock(&threadLock);
                 return;
             }
             else
@@ -201,7 +205,7 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
             }
             else{
                 pthread_mutex_lock(&threadLock);
-                logfile << user->getID() << ": in cache, but expired at " << endl;
+                logfile << user->getID() << ": in cache, but expired at " << getExpiredTime(cached_response) << endl;
                 pthread_mutex_unlock(&threadLock);
             }
             
@@ -248,19 +252,22 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
     // Receive response from origin server
     char rawRes[MAXDATASIZE];
     int resLen = recv(server_fd, rawRes, sizeof(rawRes), 0);
-    // skip some error handling here
     rawRes[resLen] = '\0';
     string resStr(rawRes);
     HTTPResponseParser parsedRes(resStr);
     string status = parsedRes.getStatus();
     string resCC = parsedRes.getHeader("Cache-Control");
     string expires = parsedRes.getHeader("Expires");
-    std::cout << "Received from server" << std::endl;
+    pthread_mutex_lock(&threadLock);
+    logfile << user->getID() << ": Received \"" << getFirstLine(resStr) << "\" from " << hostname << endl;
+    pthread_mutex_unlock(&threadLock);
     // Check 304 or 200
     // 304, use cached response
     if(status == "304"){
         string same_cached_response = it->second; // Access the value
-        cout << user->getID() << ": Responding \"" << getFirstLine(same_cached_response) << "\"" << endl;
+        pthread_mutex_lock(&threadLock);
+        logfile << user->getID() << ": Responding \"" << getFirstLine(same_cached_response) << "\"" << endl;
+        pthread_mutex_unlock(&threadLock);
         send(client_fd, same_cached_response.c_str(), same_cached_response.size(), 0);
         return;
     }
@@ -268,7 +275,9 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
     {   // response is chunked
         string completeResponse = resStr; // To assemble chunked response, Initialize complete response with what we've received so far
         if(parsedRes.isChunked()){
-            std::cout << "Responding " << std::endl;
+            pthread_mutex_lock(&threadLock);
+            logfile << user->getID() << "Responding " << getFirstLine(resStr) << "\"" << endl;
+            pthread_mutex_unlock(&threadLock);
             send(client_fd, rawRes, resLen, 0);
             char chunkedRes[MAXDATASIZE];
             while(true){
@@ -278,15 +287,14 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
                 }
                 completeResponse.append(chunkedRes, chunkedResLen);
                 chunkedRes[chunkedResLen] = '\0';
-                std::cout << "Responding " << std::endl;
                 send(client_fd, chunkedRes, chunkedResLen, 0);
             }
-            // need code to store it in cache
         }
         // Not chunked
         else{ 
-            std::cout << "not chunked." << std::endl;
-            cout << user->getID() << ": Responding \"" << getFirstLine(resStr) << "\"" << endl;
+            pthread_mutex_lock(&threadLock);
+            logfile << user->getID() << ": Responding \"" << getFirstLine(resStr) << "\"" << endl;
+            pthread_mutex_unlock(&threadLock);
             send(client_fd, rawRes, resLen, 0);
         }
         // After receiving whole reponse, decide whether cache it or not
