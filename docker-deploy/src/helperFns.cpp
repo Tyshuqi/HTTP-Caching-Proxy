@@ -200,7 +200,7 @@ bool isNotExpiredWithoutReq(const std::string &rawResponse)
     std::string Expires = responseParser.getHeader("Expires");
     if (responseParser.getHeader("Cache-Control") != "")
     {
-        return compareCurrAndExpires(calculateExpiration(responseParser.getHeader("Date"), responseParser.getHeader("Cache-Control")));
+        return compareCurrAndExpires(calculateExpirationWithoutReq(responseParser.getHeader("Date"), responseParser.getHeader("Cache-Control")));
     }
     else if (responseParser.getHeader("Expires") != "")
     {
