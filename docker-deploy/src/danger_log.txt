@@ -1,0 +1,41 @@
+
+02/17
+In processConnect func, if one connection meet error, exit immediately, proxy closing tunnel and cannot handle other connections, which disrupting the entire service.
+Fixed: We change exit(EXIT_FALIURE) to return, we can continue handle other request, which is more reasonable.
+
+02/19
+In processRequest func, when we parse the request, we use getHeader get the host and port, we assume that the format is https://host:port/, 
+but we ignore that http format is maybe http://host/ and use default port 80.
+Fixed: We try to find : firstly, if we cannot find :, we use default port 80.
+
+02/20
+In processGet func, we ignore the priority of max-age and expires, the priority of max-age should be higher than expires
+Fixed: When we get cache-control header, we parse the max-age firstly, use it to calculate the reponse is fresh or not，if max-age not exists,we parse expires header, use expires to decide the response is fresh or not.
+
+02/22
+In processGet func, we lack revalidation process, if we decide the reponse is in cache and it has expired, we should revalidate it.
+Fixed: We check Etag, if Etag exists, we add if-none-match in request, otherwise we check Last-modified, add if-modified-since, 
+recv the server's response, if the status code is 304, use cached response, if status code is 200, use response server sent.
+If both Etag and Last-modified not exist, we directly send request to server and receive response from server.
+
+02/24
+We can not cache chunked data, we guess that maybe the receive buffer is not large enough.
+Fixed: We use a buffer to receive chunked data , and after receiving, we append this buffer to a string, 
+then initialize this buffer for next-time receive, after receiving all chunked data, we cache this string as a compplete response.
+
+02/25
+When checking the response is fresh or not, We considered the max-stale and min-fresh field in request cache-control.
+
+02/26
+response cache-control:"no-cache" needs validation, request cache-control: "no-cache" needs validation.
+
+02/28
+If webserver send a corrupted response, proxy must reply with a 502 error code. 
+If proxy receives a malformed request, it must reply with a 400 error code.
+Fixed: We checked the requestparser and responseparser, if it can not parse, which indicates that the reponse is corrupted or request is malformed, we give 502 or 400 error code.
+
+03/01
+Finished deamon.
+
+03/01
+Finished docker.
