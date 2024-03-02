@@ -276,7 +276,7 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
         string completeResponse = resStr; // To assemble chunked response, Initialize complete response with what we've received so far
         if(parsedRes.isChunked()){
             pthread_mutex_lock(&threadLock);
-            logfile << user->getID() << "Responding " << getFirstLine(resStr) << "\"" << endl;
+            logfile << user->getID() << " Responding " << getFirstLine(resStr) << "\"" << endl;
             pthread_mutex_unlock(&threadLock);
             send(client_fd, rawRes, resLen, 0);
             char chunkedRes[MAXDATASIZE];
