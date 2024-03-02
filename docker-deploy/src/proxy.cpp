@@ -280,7 +280,7 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
         return;
     }
     else
-    {                                     // response is chunked
+    {  // response is chunked
         string completeResponse = resStr; // To assemble chunked response, Initialize complete response with what we've received so far
         if(parsedRes.isChunked()){
             pthread_mutex_lock(&threadLock);
