@@ -109,14 +109,29 @@ std::string calculateExpirationWithoutReq(const std::string &dateStr, const std:
     }
 }
 
-std::tm parseDate(const std::string &dateStr)
-{
-    std::tm date = {};
-    std::istringstream ss(dateStr);
-    ss >> std::get_time(&date, "%a, %d %b %Y %H:%M:%S GMT");
-    // std::cout << "Parsed date: " << std::put_time(&date, "%a, %d %b %Y %H:%M:%S GMT") << std::endl;
-    return date;
+std::string getExpiredTime(const std::string& resStr){
+    HTTPResponseParser responseParser(resStr);
+    std::string CC = responseParser.getHeader("Cache-Control");
+    std::string Expires = responseParser.getHeader("Expires");
+    std::string Date = responseParser.getHeader("Date");
+    if(CC != ""){
+        return calculateExpiration(Date, CC, "");
+    }
+    else if(Expires != ""){
+        return Expires;
+    }
+    else{
+        return "Cannot get expired time";
+    }
 }
+
+std::tm parseDate(const std::string& dateStr) {
+        std::tm date = {};
+        std::istringstream ss(dateStr);
+        ss >> std::get_time(&date, "%a, %d %b %Y %H:%M:%S GMT");
+        //std::cout << "Parsed date: " << std::put_time(&date, "%a, %d %b %Y %H:%M:%S GMT") << std::endl;
+        return date;
+    }
 
 int parseSMaxAge(const std::string &cacheControlStr)
 {

@@ -9,13 +9,14 @@
 #include <unordered_map>
 
 extern std::unordered_map<std::string, std::string> cache;
-extern std::ofstream logfile("/var/log/erss/proxy.log");
-extern pthread_mutex_t threadLock = PTHREAD_MUTEX_INITIALIZER;
+extern std::ofstream logfile;
+extern pthread_mutex_t threadLock;
 
-bool isNotExpired(const std::string &rawResponse, const std::string &rawRequest);
-std::string addIfNoneMatch(const std::string &request);
-std::string addIfModifiedSince(const std::string &request);
-std::string getFirstLine(std::string &msg);
+std::string getExpiredTime(const std::string& resStr);
+bool isNotExpired(const std::string& rawResponse, const std::string& rawRequest);
+std::string addIfNoneMatch(const std::string& request);
+std::string addIfModifiedSince(const std::string& request);
+std::string getFirstLine(std::string& msg);
 
 void runProxy();
 void *processRequest(void *user_);
