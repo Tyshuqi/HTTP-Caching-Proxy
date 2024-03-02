@@ -190,7 +190,7 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
         HTTPResponseParser parsedCachedRes(cached_response);
         string cached_response_cc = parsedCachedRes.getHeader("Cache-Control");
         // Not Expired, send cached response
-        if (notExpired && !hasNoCache)
+        if (notExpired && hasNoCache == false)
         {
             pthread_mutex_lock(&threadLock);
             logfile << user->getID() << ": in cache, valid" << endl;
@@ -322,14 +322,42 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
             }
         }
 
-        if (resCC.find("no-store") == std::string::npos &&
-            resCC.find("private") == std::string::npos &&
+        if (resCC.find("no-store") == string::npos &&
+            resCC.find("private") == string::npos &&
             (resCC != "" || expires != "") &&
             status == "200" &&
             reqCC.find("no-store") == std::string::npos){ 
                 pthread_mutex_lock(&threadLock);   
                 cache[cacheKey] = completeResponse; 
+                if(strHasSubstr(resCC, "no-cache") || strHasSubstr(reqCC, "no-cache")){
+                    logfile << user->getID() << ": cached, but requires re-validation" << getExpiredTime(resStr) << endl;
+                }
+                else{
+                    logfile << user->getID() << ": cached, expires at " << getExpiredTime(resStr) << endl;
+                }
                 pthread_mutex_unlock(&threadLock); 
+        }
+        else{
+            if(resCC.find("no-store") != string::npos || reqCC.find("no-store") == string::npos){
+                pthread_mutex_lock(&threadLock);
+                logfile << user->getID() << ": not cacheable because no-store" << endl;
+                pthread_mutex_unlock(&threadLock); 
+            }
+            else if(resCC.find("private") != string::npos){
+                pthread_mutex_lock(&threadLock);
+                logfile << user->getID() << ": not cacheable because private" << endl;
+                pthread_mutex_unlock(&threadLock); 
+            }
+            else if(resCC != "" && expires != ""){
+                pthread_mutex_lock(&threadLock);
+                logfile << user->getID() << ": not cacheable because no Cache-Control and Expires" << endl;
+                pthread_mutex_unlock(&threadLock); 
+            }
+            else if(status != "200"){
+                pthread_mutex_lock(&threadLock);
+                logfile << user->getID() << ": not cacheable because status is not 200" << endl;
+                pthread_mutex_unlock(&threadLock); 
+            }
         }
     }
 }

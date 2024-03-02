@@ -165,14 +165,18 @@ bool compareCurrAndExpires(const std::string &expirationTime)
 {
     std::time_t currentTime = std::time(nullptr);
 
+    std::tm* utcTimeInfo = std::gmtime(&currentTime);
+    std::time_t currentUTCTime = std::mktime(utcTimeInfo);
+    //std::cout << "Current Time (UTC): " << std::asctime(utcTimeInfo);
+
     std::tm expirationDate = {};
     std::istringstream ss(expirationTime);
     ss >> std::get_time(&expirationDate, "%a, %d %b %Y %H:%M:%S GMT");
     std::time_t expirationTimestamp = std::mktime(&expirationDate);
 
-    std::cout << "Current Time: " << currentTime << std::endl;
-    std::cout << "Expiration Time: " << expirationTimestamp << std::endl;
-    return currentTime <= expirationTimestamp;
+    //std::cout << "Current Time: " << std::ctime(&currentTime) << std::endl;
+    //std::cout << "Expiration Time: " << expirationTime << std::endl;
+    return currentUTCTime <= expirationTimestamp;
 }
 
 bool isNotExpired(const std::string &rawResponse, const std::string &rawRequest)
@@ -316,44 +320,3 @@ void runProxy()
         pthread_detach(newThread);
     }
 }
-
-/*int main() {
-    std::string httpResponse =
-        "HTTP/1.1 200 OK\r\n"
-        "Date: Thu, 24 Feb 2024 19:22:00 GMT\r\n"
-        "Server: ExampleServer/1.0\r\n"
-        "Content-Type: text/html\r\n"
-        "Content-Length: 12345\r\n"
-        "Expires: Thu, 24 Feb 2022 13:00:00 GMT\r\n"
-        "Cache-Control: max-age=3600, public\r\n"
-
-        "\r\n"
-        "<!DOCTYPE html>\n"
-        "<html>\n"
-        "<head>\n"
-        "    <title>Example Page</title>\n"
-        "</head>\n"
-        "<body>\n"
-        "    <!-- Page content goes here -->\n"
-        "</body>\n"
-        "</html>";
-
-    std::string rawRequest = "GET /example/resource HTTP/1.1\r\n"
-                             "Host: example.com\r\n"
-                             "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:100.0) Gecko/20100101 Firefox/100.0\r\n"
-                             "ETag: \"abcdef1234567890\"\r\n"
-                             "Last-Modified: Sat, 01 Jan 2022 12:00:00 GMT\r\n"
-                             "Connection: keep-alive\r\n\r\n";
-
-    HTTPResponseParser responseParser(httpResponse);
-
-    std::string result = calculateExpiration(responseParser.getHeader("Date"), responseParser.getHeader("Cache-Control"));
-    //std::cout << "exp time: " << result << std::endl;
-    bool isNotEx = isNotExpired(httpResponse);
-    //std::cout << "is not expired: " << isNotEx << std::endl;
-    std::string match = addIfNoneMatch(rawRequest);
-    std::string modify = addIfModifiedSince(rawRequest);
-    std::cout << "match:" << match << std::endl;
-    std::cout << "modify:" << modify << std::endl;
-    return 0;
-}*/
