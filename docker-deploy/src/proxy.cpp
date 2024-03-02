@@ -171,17 +171,19 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
     string etag = parsedReq.getETag();
     string lastmodified = parsedReq.getLastModified();
     string cacheKey = parsedReq.getRequestURI();
+    string reqCC = parsedReq.getHeader("Cache-Control");
     auto it = cache.find(cacheKey);
     // if we can find this request in cache
     if (it != cache.end()) 
     {   
         string cached_response = it->second; // Access the value
-        bool notExpired = isNotExpired(cached_response);  // Check expire or not
+        bool hasNoCache = (strHasSubstr(request, "no-cache") == true || strHasSubstr(cached_response, "no-cache") == true);
+        bool notExpired = isNotExpired(cached_response, request);  // Check expire or not
         // Intend to check whether there is "no-cache" in cachedResponse
         HTTPResponseParser parsedCachedRes(cached_response);
         string cached_response_cc = parsedCachedRes.getHeader("Cache-Control");  
         // Not Expired, send cached response
-        if(notExpired)
+        if(notExpired && !hasNoCache)
         {
             std::cout << user->getID() << ": in cache, valid" << std::endl;
             cout << user->getID() << ": Responding \"" << getFirstLine(cached_response) << "\"" << endl;
@@ -232,7 +234,7 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
     string resStr(rawRes);
     HTTPResponseParser parsedRes(resStr);
     string status = parsedRes.getStatus();
-    string cacheControl = parsedRes.getHeader("Cache-Control");
+    string resCC = parsedRes.getHeader("Cache-Control");
     string expires = parsedRes.getHeader("Expires");
     std::cout << "Received from server" << std::endl;
     // Check 304 or 200
@@ -269,10 +271,11 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
             send(client_fd, rawRes, resLen, 0);
         }
         // After receiving whole reponse, decide whether cache it or not
-        if (cacheControl.find("no-store") == std::string::npos && 
-            cacheControl.find("private") == std::string::npos &&
-            (cacheControl != "" || expires != "") &&
-            status == "200"){ 
+        if (resCC.find("no-store") == std::string::npos && 
+            resCC.find("private") == std::string::npos &&
+            (resCC != "" || expires != "") &&
+            status == "200" &&
+            reqCC.find("no-store") == std::string::npos){ 
             cache[cacheKey] = completeResponse; 
         }
     }
