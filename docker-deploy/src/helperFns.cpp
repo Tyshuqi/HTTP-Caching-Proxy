@@ -12,15 +12,56 @@ std::string getFirstLine(std::string& msg){
     return firstLine;
 }
 
-std::string calculateExpiration(const std::string& dateStr, const std::string& cacheControlStr) {
+int parseMaxAge(const std::string& cacheControlStr) {
+        int maxAge = -1;
+        size_t pos = cacheControlStr.find("max-age=");
+        if (pos != std::string::npos) {
+            try {
+                maxAge = std::stoi(cacheControlStr.substr(pos + 8));
+            } catch (const std::invalid_argument&) {
+                maxAge = -1;
+            }
+        }
+        return maxAge;
+    }
+
+int parseMaxStale(const std::string& CCStr){
+    int maxStale = 0;
+    size_t pos = CCStr.find("max-stale=");
+    if(pos != std::string::npos){
+        try{
+            maxStale = std::stoi(CCStr.substr(pos + 10));
+        }catch(const std::invalid_argument&){
+            maxStale = 0;
+        }
+    }
+    return maxStale;
+}
+
+int parseMinFresh(const std::string& CCStr){
+    int minFresh = 0;
+    size_t pos = CCStr.find("min-fresh=");
+    if(pos != std::string::npos){
+        try{
+            minFresh = std::stoi(CCStr.substr(pos + 10));
+        }catch(const std::invalid_argument&){
+            minFresh = 0;
+        }
+    }
+    return minFresh;
+}
+
+std::string calculateExpiration(const std::string& dateStr, const std::string& cacheControlStr, const std::string& CCStr) {
         std::tm date = parseDate(dateStr);
         int maxAge = parseMaxAge(cacheControlStr);
         int sMaxAge = parseSMaxAge(cacheControlStr);
+        int maxStale = parseMaxStale(CCStr);
+        int minFresh = parseMinFresh(CCStr);
 
         if (maxAge >= 0 || sMaxAge >= 0) {
             int effectiveMaxAge = (sMaxAge >= 0) ? sMaxAge : maxAge;
             //std::cout << "effect " << effectiveMaxAge << std::endl;
-            std::time_t expirationTime = std::mktime(&date) + effectiveMaxAge;
+            std::time_t expirationTime = std::mktime(&date) + effectiveMaxAge + maxStale - minFresh;
             return formatDate(expirationTime);
         } else {
             return "Cache-Control doesn't have max-age or s-maxage";
@@ -33,19 +74,6 @@ std::tm parseDate(const std::string& dateStr) {
         ss >> std::get_time(&date, "%a, %d %b %Y %H:%M:%S GMT");
         //std::cout << "Parsed date: " << std::put_time(&date, "%a, %d %b %Y %H:%M:%S GMT") << std::endl;
         return date;
-    }
-
-int parseMaxAge(const std::string& cacheControlStr) {
-        int maxAge = -1;
-        size_t pos = cacheControlStr.find("max-age=");
-        if (pos != std::string::npos) {
-            try {
-                maxAge = std::stoi(cacheControlStr.substr(pos + 8));
-            } catch (const std::invalid_argument&) {
-                maxAge = -1;
-            }
-        }
-        return maxAge;
     }
 
 int parseSMaxAge(const std::string& cacheControlStr) {
@@ -78,14 +106,17 @@ bool compareCurrAndExpires(const std::string& expirationTime) {
     ss >> std::get_time(&expirationDate, "%a, %d %b %Y %H:%M:%S GMT");
     std::time_t expirationTimestamp = std::mktime(&expirationDate);
 
+    std::cout << "Current Time: " << currentTime << std::endl;
+    std::cout << "Expiration Time: " << expirationTimestamp << std::endl;
     return currentTime <= expirationTimestamp;
 }
 
-bool isNotExpired(const std::string& rawResponse){
+bool isNotExpired(const std::string& rawResponse, const std::string& rawRequest){
     HTTPResponseParser responseParser(rawResponse);
+    HTTPRequestParser requestParser(rawRequest);
     std::string Expires = responseParser.getHeader("Expires");
     if(responseParser.getHeader("Cache-Control") != ""){
-        return compareCurrAndExpires(calculateExpiration(responseParser.getHeader("Date"), responseParser.getHeader("Cache-Control")));
+        return compareCurrAndExpires(calculateExpiration(responseParser.getHeader("Date"), responseParser.getHeader("Cache-Control"), requestParser.getHeader("Cache-Control")));
     }
     else if(responseParser.getHeader("Expires") != ""){
         return compareCurrAndExpires(Expires);
@@ -109,6 +140,13 @@ std::string addIfModifiedSince(const std::string& request){
     std::string ans = request;
     ans.insert(ans.size() - 2, ifModSinceLine);
     return ans;
+}
+
+bool strHasSubstr(const std::string& str, const std::string& subStr){
+    if(str.find("max-stale=") != std::string::npos){
+        return true;
+    }
+    return false;
 }
 
 void * processRequest(void * user_){
