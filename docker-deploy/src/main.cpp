@@ -5,8 +5,6 @@
 
 int main()
 {
-    //const char *port = "12345";
-    //Proxy *proxy = new Proxy();
     runProxy();
     return 1;
 }

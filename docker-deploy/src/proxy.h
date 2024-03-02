@@ -1,7 +1,6 @@
 #ifndef PROXY_H
 #define PROXY_H
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -44,8 +43,8 @@ public:
     int setupClient(const char* host, const char* port);
     
     void processConnect(int client_fd, int server_fd, User * user);
-    void processPost(int client_fd, int server_fd, std::string requestStr, User * user);
-    void processGet(int client_fd, int server_fd, std::string host, std::string port, std::string request, User * user);
+    void processPost(int client_fd, int server_fd, std::string requestStr, User * user, std::string hostname);
+    void processGet(int client_fd, int server_fd, std::string hostname, std::string port, std::string request, User * user);
 };
 
 #endif

@@ -2,12 +2,15 @@
 #define HELPER_FNS_H
 
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <sstream>
 #include <ctime>
 #include <unordered_map>
 
 extern std::unordered_map<std::string, std::string> cache;
+extern std::ofstream logfile("/var/log/erss/proxy.log");
+extern pthread_mutex_t threadLock = PTHREAD_MUTEX_INITIALIZER;
 
 bool isNotExpired(const std::string& rawResponse, const std::string& rawRequest);
 std::string addIfNoneMatch(const std::string& request);

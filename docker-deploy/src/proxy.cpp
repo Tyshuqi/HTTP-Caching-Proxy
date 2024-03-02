@@ -4,7 +4,6 @@
 #include "helperFns.h"
 #include "user.h"
 
-// #define PORT "12345"  // the port users will be connecting to
 #define BACKLOG 10 // how many pending connections queue will hold
 #define MAXDATASIZE 65536
 
@@ -112,11 +111,12 @@ int Proxy::setupClient(const char *host, const char *port)
 
 // If multi thread, stll need a parameter "id"
 void Proxy::processConnect(int client_fd, int server_fd, User * user){
-    cout << user->getID() << ": Responding \"HTTP/1.1 200 OK\"" << endl;
+    pthread_mutex_lock(&threadLock);
+    logfile << user->getID() << ": Responding \"HTTP/1.1 200 OK\"" << endl;
+    pthread_mutex_unlock(&threadLock);
     send(client_fd, "HTTP/1.1 200 OK\r\n\r\n", 19, 0);
     fd_set read_fds;
     int numbytes;
-
     while (true)
     {
         FD_ZERO(&read_fds);
@@ -165,9 +165,8 @@ void Proxy::processConnect(int client_fd, int server_fd, User * user){
     }
 }
 
-void Proxy::processGet(int client_fd, int server_fd, string host, string port, string request, User * user){
+void Proxy::processGet(int client_fd, int server_fd, string hostname, string port, string request, User * user){
     HTTPRequestParser parsedReq(request);
-    //int clientMaxStale = parsedReq.getMaxStale();
     string etag = parsedReq.getETag();
     string lastmodified = parsedReq.getLastModified();
     string cacheKey = parsedReq.getRequestURI();
@@ -185,20 +184,34 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
         // Not Expired, send cached response
         if(notExpired && !hasNoCache)
         {
-            std::cout << user->getID() << ": in cache, valid" << std::endl;
-            cout << user->getID() << ": Responding \"" << getFirstLine(cached_response) << "\"" << endl;
+            pthread_mutex_lock(&threadLock);
+            logfile << user->getID() << ": in cache, valid" << endl;
+            logfile << user->getID() << ": Responding \"" << getFirstLine(cached_response) << "\"" << endl;
+            pthread_mutex_unlock(&threadLock);
             send(client_fd, cached_response.c_str(), cached_response.size(), 0);
             return;
         }
         // Expired, check Etag
         else
         {
-            cout << user->getID() << ": in cache, requires validation" << std::endl;
+            if(hasNoCache){
+                pthread_mutex_lock(&threadLock);
+                logfile << user->getID() << ": in cache, requires validation" << endl;
+                pthread_mutex_unlock(&threadLock);
+            }
+            else{
+                pthread_mutex_lock(&threadLock);
+                logfile << user->getID() << ": in cache, but expired at " << endl;
+                pthread_mutex_unlock(&threadLock);
+            }
+            
             // Etag exists
             if(!etag.empty())
             {
                 string request_add_INM = addIfNoneMatch(request);
-                cout << user->getID() << ": Requesting \"" << getFirstLine(request_add_INM) << "\" from " << host << endl;
+                pthread_mutex_lock(&threadLock);
+                logfile << user->getID() << ": Requesting \"" << getFirstLine(request_add_INM) << "\" from " << hostname << endl;
+                pthread_mutex_unlock(&threadLock);
                 send(server_fd, request_add_INM.c_str(), request_add_INM.size(), 0);
             }
             // Etag not exists, check Last-Modified
@@ -207,13 +220,17 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
                 // Last-Modified exists
                 if(!lastmodified.empty()){
                     string request_add_IMS = addIfModifiedSince(request);
-                    cout << user->getID() << ": Requesting \"" << getFirstLine(request_add_IMS) << "\" from " << host << endl;
+                    pthread_mutex_lock(&threadLock);
+                    logfile << user->getID() << ": Requesting \"" << getFirstLine(request_add_IMS) << "\" from " << hostname << endl;
+                    pthread_mutex_unlock(&threadLock);
                     send(server_fd, request_add_IMS.c_str(), request_add_IMS.size(), 0); 
                 }
                 // Both ETag and Last-modified not exists, send request to origin server
                 else
                 {
-                    cout << user->getID() << ": Requesting \"" << getFirstLine(request) << "\" from " << host << endl;
+                    pthread_mutex_lock(&threadLock);
+                    logfile << user->getID() << ": Requesting \"" << getFirstLine(request) << "\" from " << hostname << endl;
+                    pthread_mutex_unlock(&threadLock);
                     send(server_fd, request.c_str(), request.size(), 0); 
                 }
             }   
@@ -222,8 +239,10 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
     // if we cannot find the request in cache
     else 
     {
-        std::cout << user->getID() << ": not in cache" << std::endl;
-        cout << user->getID() << ": Requesting \"" << getFirstLine(request) << "\" from " << host << endl;
+        pthread_mutex_lock(&threadLock);
+        logfile << user->getID() << ": not in cache" << endl;
+        logfile << user->getID() << ": Requesting \"" << getFirstLine(request) << "\" from " << hostname << endl;
+        pthread_mutex_unlock(&threadLock);
         send(server_fd, request.c_str(), request.size(), 0);
     }       
     // Receive response from origin server
@@ -281,7 +300,7 @@ void Proxy::processGet(int client_fd, int server_fd, string host, string port, s
     }
 }
 
-void Proxy::processPost(int client_fd, int server_fd, string requestStr, User * user){
+void Proxy::processPost(int client_fd, int server_fd, string requestStr, User * user, string hostname){
 
     // Forward the POST request to the server
     if (send(server_fd, requestStr.c_str(), requestStr.length(), 0) <= 0)
@@ -290,7 +309,9 @@ void Proxy::processPost(int client_fd, int server_fd, string requestStr, User * 
         close(server_fd);
         return;
     }
-    cout << user->getID() << ": Requesting \"" << getFirstLine(requestStr) << "\" from " << endl;
+    pthread_mutex_lock(&threadLock);
+    logfile << user->getID() << ": Requesting \"" << getFirstLine(requestStr) << "\" from " << hostname << endl;
+    pthread_mutex_unlock(&threadLock);
     // Receive the response from the server
     char response[MAXDATASIZE];
     int numbytes = recv(server_fd, response, MAXDATASIZE - 1, 0);
@@ -302,12 +323,17 @@ void Proxy::processPost(int client_fd, int server_fd, string requestStr, User * 
     }
     response[numbytes] = '\0';
     string resp = response;
+    pthread_mutex_lock(&threadLock);
+    logfile << user->getID() << ": Received \"" << getFirstLine(resp) << "\" from " << hostname << endl;
+    pthread_mutex_unlock(&threadLock);
     // Forward the response back to the client
     if (send(client_fd, response, numbytes, 0) <= 0)
     {
         cerr << "Failed to send response back to client" << endl;
     }
-    cout << user->getID() << ": Responding \"" << getFirstLine(resp) << "\"" << endl;
+    pthread_mutex_lock(&threadLock);
+    logfile << user->getID() << ": Responding \"" << getFirstLine(resp) << "\"" << endl;
+    pthread_mutex_unlock(&threadLock);
     // Close the server connection
     close(server_fd);
 }

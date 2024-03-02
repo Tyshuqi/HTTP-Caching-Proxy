@@ -5,6 +5,8 @@
 #include "user.h"
 
 std::unordered_map<std::string, std::string> cache;
+std::ofstream logfile("/var/log/erss/proxy.log");
+pthread_mutex_t threadLock = PTHREAD_MUTEX_INITIALIZER;
 
 std::string getFirstLine(std::string& msg){
     size_t firstLineEnd = msg.find("\r\n");
@@ -162,7 +164,9 @@ void * processRequest(void * user_){
     rawRequest[numbytes] = '\0';
     std::string requestStr(rawRequest);
     user->setREQUEST(getFirstLine(requestStr));
-    std::cout << user->getID() << ": \"" << user->getREQUEST() << "\" " << "from " << user->getIP() << " @ " << user->getTIME();  
+    pthread_mutex_lock(&threadLock);
+    logfile << user->getID() << ": \"" << user->getREQUEST() << "\" " << "from " << user->getIP() << " @ " << user->getTIME();  
+    pthread_mutex_unlock(&threadLock);
     HTTPRequestParser *parse = new HTTPRequestParser(requestStr);
     std::string hostport = parse->getHeader("Host");
     size_t colonPos = hostport.find(':');
@@ -178,7 +182,6 @@ void * processRequest(void * user_){
     }
 
     std::string method = parse->getMethod();
-    
     int server_fd = proxy.setupClient(parseHost.c_str(), parsePort.c_str());
 
     if (method == "CONNECT"){
@@ -187,7 +190,7 @@ void * processRequest(void * user_){
 
     // POST
     else if (method == "POST"){
-        proxy.processPost(user->getSocketFd(), server_fd, requestStr, user);
+        proxy.processPost(user->getSocketFd(), server_fd, requestStr, user, parseHost);
     }
     
     // GET
