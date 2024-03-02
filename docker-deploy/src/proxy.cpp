@@ -315,7 +315,9 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
             {
                 if (!isNotExpiredWithoutReq(it->second))
                 {
+                    pthread_mutex_lock(&threadLock); 
                     cache.erase(it);
+                    pthread_mutex_unlock(&threadLock); 
                 }
             }
         }
