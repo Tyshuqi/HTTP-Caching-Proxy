@@ -6,13 +6,14 @@
 
 #define BACKLOG 10 // how many pending connections queue will hold
 #define MAXDATASIZE 65536
+#define MAXMAPSIZE 1000  // Cache size
 
 using namespace std;
 
 int Proxy::setupServer(const char *port)
 {
-    int self_socket_fd;             // listen on sock_fd, new connection on new_fd
-    struct addrinfo hints, *servinfo;   // *p;
+    int self_socket_fd;               // listen on sock_fd, new connection on new_fd
+    struct addrinfo hints, *servinfo; // *p;
     int yes = 1;
     int rv;
 
@@ -56,7 +57,8 @@ int Proxy::setupServer(const char *port)
     return self_socket_fd;
 }
 
-int Proxy::acceptUser(int self_socket_fd, std::string & client_ip){
+int Proxy::acceptUser(int self_socket_fd, std::string &client_ip)
+{
     char s[INET6_ADDRSTRLEN];
     int client_fd;
     struct sockaddr_storage their_addr; // connector's address information
@@ -89,20 +91,20 @@ int Proxy::setupClient(const char *host, const char *port)
         cerr << "client: getaddrinfo:" << gai_strerror(rv) << endl;
         cerr << "host" << host << std::endl;
         cerr << "port" << port << std::endl;
-        //exit(EXIT_FAILURE);
+        // exit(EXIT_FAILURE);
         return -1;
     }
     if ((sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol)) == -1)
     {
         cerr << "client: socket" << endl;
-        //exit(EXIT_FAILURE);
+        // exit(EXIT_FAILURE);
         return -1;
     }
     if (connect(sockfd, servinfo->ai_addr, servinfo->ai_addrlen) == -1)
     {
         close(sockfd);
         cerr << "client: connect" << endl;
-        //exit(EXIT_FAILURE);
+        // exit(EXIT_FAILURE);
         return -1;
     }
     freeaddrinfo(servinfo); // all done with this structure
@@ -110,7 +112,8 @@ int Proxy::setupClient(const char *host, const char *port)
 }
 
 // If multi thread, stll need a parameter "id"
-void Proxy::processConnect(int client_fd, int server_fd, User * user){
+void Proxy::processConnect(int client_fd, int server_fd, User *user)
+{
     pthread_mutex_lock(&threadLock);
     logfile << user->getID() << ": Responding \"HTTP/1.1 200 OK\"" << endl;
     pthread_mutex_unlock(&threadLock);
@@ -129,7 +132,7 @@ void Proxy::processConnect(int client_fd, int server_fd, User * user){
         if (n < 0)
         {
             cerr << "Select error" << endl;
-            //exit(EXIT_FAILURE);
+            // exit(EXIT_FAILURE);
             return;
         }
 
@@ -169,7 +172,8 @@ void Proxy::processConnect(int client_fd, int server_fd, User * user){
     }
 }
 
-void Proxy::processGet(int client_fd, int server_fd, string hostname, string port, string request, User * user){
+void Proxy::processGet(int client_fd, int server_fd, string hostname, string port, string request, User *user)
+{
     HTTPRequestParser parsedReq(request);
     string etag = parsedReq.getETag();
     string lastmodified = parsedReq.getLastModified();
@@ -177,16 +181,16 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
     string reqCC = parsedReq.getHeader("Cache-Control");
     auto it = cache.find(cacheKey);
     // if we can find this request in cache
-    if (it != cache.end()) 
-    {   
+    if (it != cache.end())
+    {
         string cached_response = it->second; // Access the value
         bool hasNoCache = (strHasSubstr(request, "no-cache") == true || strHasSubstr(cached_response, "no-cache") == true);
-        bool notExpired = isNotExpired(cached_response, request);  // Check expire or not
+        bool notExpired = isNotExpired(cached_response, request); // Check expire or not
         // Intend to check whether there is "no-cache" in cachedResponse
         HTTPResponseParser parsedCachedRes(cached_response);
-        string cached_response_cc = parsedCachedRes.getHeader("Cache-Control");  
+        string cached_response_cc = parsedCachedRes.getHeader("Cache-Control");
         // Not Expired, send cached response
-        if(notExpired && !hasNoCache)
+        if (notExpired && !hasNoCache)
         {
             pthread_mutex_lock(&threadLock);
             logfile << user->getID() << ": in cache, valid" << endl;
@@ -198,19 +202,21 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
         // Expired, check Etag
         else
         {
-            if(hasNoCache){
+            if (hasNoCache)
+            {
                 pthread_mutex_lock(&threadLock);
                 logfile << user->getID() << ": in cache, requires validation" << endl;
                 pthread_mutex_unlock(&threadLock);
             }
-            else{
+            else
+            {
                 pthread_mutex_lock(&threadLock);
                 logfile << user->getID() << ": in cache, but expired at " << getExpiredTime(cached_response) << endl;
                 pthread_mutex_unlock(&threadLock);
             }
-            
+
             // Etag exists
-            if(!etag.empty())
+            if (!etag.empty())
             {
                 string request_add_INM = addIfNoneMatch(request);
                 pthread_mutex_lock(&threadLock);
@@ -222,12 +228,13 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
             else
             {
                 // Last-Modified exists
-                if(!lastmodified.empty()){
+                if (!lastmodified.empty())
+                {
                     string request_add_IMS = addIfModifiedSince(request);
                     pthread_mutex_lock(&threadLock);
                     logfile << user->getID() << ": Requesting \"" << getFirstLine(request_add_IMS) << "\" from " << hostname << endl;
                     pthread_mutex_unlock(&threadLock);
-                    send(server_fd, request_add_IMS.c_str(), request_add_IMS.size(), 0); 
+                    send(server_fd, request_add_IMS.c_str(), request_add_IMS.size(), 0);
                 }
                 // Both ETag and Last-modified not exists, send request to origin server
                 else
@@ -235,20 +242,20 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
                     pthread_mutex_lock(&threadLock);
                     logfile << user->getID() << ": Requesting \"" << getFirstLine(request) << "\" from " << hostname << endl;
                     pthread_mutex_unlock(&threadLock);
-                    send(server_fd, request.c_str(), request.size(), 0); 
+                    send(server_fd, request.c_str(), request.size(), 0);
                 }
-            }   
+            }
         }
-    } 
+    }
     // if we cannot find the request in cache
-    else 
+    else
     {
         pthread_mutex_lock(&threadLock);
         logfile << user->getID() << ": not in cache" << endl;
         logfile << user->getID() << ": Requesting \"" << getFirstLine(request) << "\" from " << hostname << endl;
         pthread_mutex_unlock(&threadLock);
         send(server_fd, request.c_str(), request.size(), 0);
-    }       
+    }
     // Receive response from origin server
     char rawRes[MAXDATASIZE];
     int resLen = recv(server_fd, rawRes, sizeof(rawRes), 0);
@@ -263,7 +270,8 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
     pthread_mutex_unlock(&threadLock);
     // Check 304 or 200
     // 304, use cached response
-    if(status == "304"){
+    if (status == "304")
+    {
         string same_cached_response = it->second; // Access the value
         pthread_mutex_lock(&threadLock);
         logfile << user->getID() << ": Responding \"" << getFirstLine(same_cached_response) << "\"" << endl;
@@ -272,7 +280,7 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
         return;
     }
     else
-    {   // response is chunked
+    {                                     // response is chunked
         string completeResponse = resStr; // To assemble chunked response, Initialize complete response with what we've received so far
         if(parsedRes.isChunked()){
             pthread_mutex_lock(&threadLock);
@@ -280,9 +288,11 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
             pthread_mutex_unlock(&threadLock);
             send(client_fd, rawRes, resLen, 0);
             char chunkedRes[MAXDATASIZE];
-            while(true){
+            while (true)
+            {
                 int chunkedResLen = recv(server_fd, chunkedRes, sizeof(chunkedRes), 0);
-                if(chunkedResLen <= 0){
+                if (chunkedResLen <= 0)
+                {
                     break;
                 }
                 completeResponse.append(chunkedRes, chunkedResLen);
@@ -298,7 +308,21 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
             send(client_fd, rawRes, resLen, 0);
         }
         // After receiving whole reponse, decide whether cache it or not
-        if (resCC.find("no-store") == std::string::npos && 
+        // Clean expired response
+        if (cache.size() > MAXMAPSIZE)
+        {
+            for (unordered_map<string, string>::iterator it = cache.begin(); it != cache.end(); ++it)
+            {
+                if (!isNotExpiredWithoutReq(it->second))
+                {
+                    pthread_mutex_lock(&threadLock); 
+                    cache.erase(it);
+                    pthread_mutex_unlock(&threadLock); 
+                }
+            }
+        }
+
+        if (resCC.find("no-store") == std::string::npos &&
             resCC.find("private") == std::string::npos &&
             (resCC != "" || expires != "") &&
             status == "200" &&
@@ -310,7 +334,8 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
     }
 }
 
-void Proxy::processPost(int client_fd, int server_fd, string requestStr, User * user, string hostname){
+void Proxy::processPost(int client_fd, int server_fd, string requestStr, User *user, string hostname)
+{
 
     // Forward the POST request to the server
     if (send(server_fd, requestStr.c_str(), requestStr.length(), 0) <= 0)
