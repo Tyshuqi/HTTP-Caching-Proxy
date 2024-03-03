@@ -1,4 +1,5 @@
 
+What failures we handled?
 02/17
 In processConnect func, if one connection meet error, exit immediately, proxy closing tunnel and cannot handle other connections, which disrupting the entire service.
 Fixed: We change exit(EXIT_FALIURE) to return, we can continue handle other request, which is more reasonable.
@@ -32,10 +33,25 @@ response cache-control:"no-cache" needs validation, request cache-control: "no-c
 02/28
 If webserver send a corrupted response, proxy must reply with a 502 error code. 
 If proxy receives a malformed request, it must reply with a 400 error code.
-Fixed: We checked the requestparser and responseparser, if it can not parse, which indicates that the reponse is corrupted or request is malformed, we give 502 or 400 error code.
+Fixed: We checked the requestparser and responseparser, if it can not parse, which indicates that the reponse is corrupted or request is malformed, 
+we give 502 or 400 error code, and exit this thread, continue other thread.
 
 03/01
 Finished deamon.
 
 03/01
 Finished docker.
+
+The exception guarantees we make:
+No-exception Guarantee:
+The C++ standard library operations that could throw exceptions (e.g., std::string operations) are used without explicit try-catch blocks throughout most of this code. 
+Basic Exception Guarantee:
+Several parts of the code ensure that, in case of an error (e.g., a failed socket operation), 
+the program will not leak resources or leave the system in an indeterminate state.
+What we will improve:
+1.Explicit Exception Handling: For operations that can throw exceptions (especially those involving std::string and other standard library components), 
+we will consider adding try-catch blocks to provide a clearer exception safety guarantee.
+2.Resource Management: We will use RAII (Resource Acquisition Is Initialization) wrappers for managing resources like sockets and memory allocations. 
+This ensures that resources are properly released even when exceptions occur.
+
+
