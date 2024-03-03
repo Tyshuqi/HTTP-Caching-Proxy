@@ -1,0 +1,48 @@
+0: "CONNECT canvas.duke.edu:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:20 2024
+0: Responding "HTTP/1.1 200 OK"
+1: "CONNECT www.when2meet.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:20 2024
+1: Responding "HTTP/1.1 200 OK"
+2: "CONNECT beej-zhcn.netdpi.net:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:21 2024
+2: Responding "HTTP/1.1 200 OK"
+3: "CONNECT www.google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:21 2024
+3: Responding "HTTP/1.1 200 OK"
+4: "CONNECT www.submarinecablemap.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:21 2024
+4: Responding "HTTP/1.1 200 OK"
+5: "CONNECT lh3.google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:21 2024
+5: Responding "HTTP/1.1 200 OK"
+6: "CONNECT lh3.googleusercontent.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:21 2024
+6: Responding "HTTP/1.1 200 OK"
+7: "CONNECT cdn.heapanalytics.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:21 2024
+7: Responding "HTTP/1.1 200 OK"
+8: "CONNECT maps.googleapis.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:21 2024
+8: Responding "HTTP/1.1 200 OK"
+9: "CONNECT app.gitbook.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:22 2024
+9: Responding "HTTP/1.1 200 OK"
+10: "CONNECT o1000929.ingest.sentry.io:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:22 2024
+11: "CONNECT firestore.googleapis.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:22 2024
+11: Responding "HTTP/1.1 200 OK"
+10: Responding "HTTP/1.1 200 OK"
+12: "CONNECT analytics.google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:22 2024
+12: Responding "HTTP/1.1 200 OK"
+13: "CONNECT heapanalytics.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:22 2024
+13: Responding "HTTP/1.1 200 OK"
+14: "CONNECT api.amplitude.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:22 2024
+15: "CONNECT api.gitbook.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:22 2024
+16: "CONNECT www.google-analytics.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:22 2024
+16: Responding "HTTP/1.1 200 OK"
+15: Responding "HTTP/1.1 200 OK"
+14: Responding "HTTP/1.1 200 OK"
+17: "CONNECT vcm.duke.edu:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:22 2024
+17: Responding "HTTP/1.1 200 OK"
+18: "CONNECT webchat.botframework.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:23 2024
+19: "CONNECT vcm.duke.edu:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:23 2024
+19: Responding "HTTP/1.1 200 OK"
+18: Responding "HTTP/1.1 200 OK"
+20: "CONNECT gitlab.oit.duke.edu:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:23 2024
+20: Responding "HTTP/1.1 200 OK"
+21: "CONNECT webchat.botframework.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:23 2024
+21: Responding "HTTP/1.1 200 OK"
+21: Tunnel closed
+22: "CONNECT gitlab.oit.duke.edu:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 02:11:24 2024
+22: Responding "HTTP/1.1 200 OK"
+1: Tunnel closed

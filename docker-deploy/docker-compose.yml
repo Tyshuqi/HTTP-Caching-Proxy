@@ -4,6 +4,6 @@ services:
   proxy:
       build: ./src
       volumes:
-        - ./src:/var/log/erss
+        - ./logs:/var/log/erss
       ports:
         - "12345:12345"
