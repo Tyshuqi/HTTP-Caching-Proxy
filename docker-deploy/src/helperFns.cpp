@@ -161,12 +161,12 @@ std::string formatDate(std::time_t time)
     return oss.str();
 }
 
-bool compareCurrAndExpires(const std::string &expirationTime)
+bool compareCurrAndExpires(const std::string &expirationTime, const std::time_t& currentTime)
 {
-    std::time_t currentTime = std::time(nullptr);
+    //std::time_t currentTime = std::time(nullptr);
 
-    std::tm* utcTimeInfo = std::gmtime(&currentTime);
-    std::time_t currentUTCTime = std::mktime(utcTimeInfo);
+    //std::tm* utcTimeInfo = std::gmtime(&currentTime);
+    //std::time_t currentUTCTime = std::mktime(utcTimeInfo);
     //std::cout << "Current Time (UTC): " << std::asctime(utcTimeInfo);
 
     std::tm expirationDate = {};
@@ -176,21 +176,21 @@ bool compareCurrAndExpires(const std::string &expirationTime)
 
     //std::cout << "Current Time: " << std::ctime(&currentTime) << std::endl;
     //std::cout << "Expiration Time: " << expirationTime << std::endl;
-    return currentUTCTime <= expirationTimestamp;
+    return currentTime <= expirationTimestamp;
 }
 
-bool isNotExpired(const std::string &rawResponse, const std::string &rawRequest)
+bool isNotExpired(const std::string &rawResponse, const std::string &rawRequest, const std::time_t& currentTime)
 {
     HTTPResponseParser responseParser(rawResponse);
     HTTPRequestParser requestParser(rawRequest);
     std::string Expires = responseParser.getHeader("Expires");
     if (responseParser.getHeader("Cache-Control") != "")
     {
-        return compareCurrAndExpires(calculateExpiration(responseParser.getHeader("Date"), responseParser.getHeader("Cache-Control"), requestParser.getHeader("Cache-Control")));
+        return compareCurrAndExpires(calculateExpiration(responseParser.getHeader("Date"), responseParser.getHeader("Cache-Control"), requestParser.getHeader("Cache-Control")), currentTime);
     }
     else if (responseParser.getHeader("Expires") != "")
     {
-        return compareCurrAndExpires(Expires);
+        return compareCurrAndExpires(Expires, currentTime);
     }
     else
     {
@@ -204,11 +204,11 @@ bool isNotExpiredWithoutReq(const std::string &rawResponse)
     std::string Expires = responseParser.getHeader("Expires");
     if (responseParser.getHeader("Cache-Control") != "")
     {
-        return compareCurrAndExpires(calculateExpirationWithoutReq(responseParser.getHeader("Date"), responseParser.getHeader("Cache-Control")));
+        return compareCurrAndExpires(calculateExpirationWithoutReq(responseParser.getHeader("Date"), responseParser.getHeader("Cache-Control")), std::time(nullptr));
     }
     else if (responseParser.getHeader("Expires") != "")
     {
-        return compareCurrAndExpires(Expires);
+        return compareCurrAndExpires(Expires, std::time(nullptr));
     }
     else
     {
@@ -236,7 +236,7 @@ std::string addIfModifiedSince(const std::string &request)
 
 bool strHasSubstr(const std::string &str, const std::string &subStr)
 {
-    if (str.find("max-stale=") != std::string::npos)
+    if (str.find(subStr) != std::string::npos)
     {
         return true;
     }
@@ -259,7 +259,7 @@ void *processRequest(void *user_)
     user->setREQUEST(getFirstLine(requestStr));
     pthread_mutex_lock(&threadLock);
     logfile << user->getID() << ": \"" << user->getREQUEST() << "\" "
-            << "from " << user->getIP() << " @ " << user->getTIME();
+            << "from " << user->getIP() << " @ " << user->getTIMEStr();
     pthread_mutex_unlock(&threadLock);
     HTTPRequestParser *parse = new HTTPRequestParser(requestStr);
     std::string hostport = parse->getHeader("Host");

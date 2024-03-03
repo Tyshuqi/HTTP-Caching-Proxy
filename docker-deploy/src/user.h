@@ -20,7 +20,7 @@ public:
     const int getID() const{
         return ID;
     }
-    const std::string getTIME() const{
+    const std::string getTIMEStr() const{
         std::tm * timeUTC = std::gmtime(&TIME);
         return std::asctime(timeUTC);
     }
@@ -44,6 +44,10 @@ public:
     }
     void setREQUEST(std::string REQUEST_){
         REQUEST = REQUEST_;
+    }
+    const std::time_t getTIME() const{
+        std::tm * timeUTC = std::gmtime(&TIME);
+        return std::mktime(timeUTC);
     }
 };
 

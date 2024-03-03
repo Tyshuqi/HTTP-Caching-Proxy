@@ -13,7 +13,7 @@ extern std::ofstream logfile;
 extern pthread_mutex_t threadLock;
 
 std::string getExpiredTime(const std::string& resStr);
-bool isNotExpired(const std::string& rawResponse, const std::string& rawRequest);
+bool isNotExpired(const std::string& rawResponse, const std::string& rawRequest, const std::time_t& currentTime);
 std::string addIfNoneMatch(const std::string& request);
 std::string addIfModifiedSince(const std::string& request);
 std::string getFirstLine(std::string& msg);
@@ -27,7 +27,7 @@ int parseMaxAge(const std::string &cacheControlStr);
 int parseSMaxAge(const std::string &cacheControlStr);
 std::string formatDate(std::time_t time);
 std::string calculateExpiration(const std::string &dateStr, const std::string &cacheControlStr);
-bool compareCurrAndExpires(const std::string &expirationTime);
+bool compareCurrAndExpires(const std::string &expirationTime, const std::time_t& currentTime);
 bool strHasSubstr(const std::string &str, const std::string &subStr);
 
 bool isNotExpiredWithoutReq(const std::string &rawResponse);

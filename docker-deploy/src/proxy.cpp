@@ -185,7 +185,7 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
     {
         string cached_response = it->second; // Access the value
         bool hasNoCache = (strHasSubstr(request, "no-cache") == true || strHasSubstr(cached_response, "no-cache") == true);
-        bool notExpired = isNotExpired(cached_response, request); // Check expire or not
+        bool notExpired = isNotExpired(cached_response, request, user->getTIME()); // Check expire or not
         // Intend to check whether there is "no-cache" in cachedResponse
         HTTPResponseParser parsedCachedRes(cached_response);
         string cached_response_cc = parsedCachedRes.getHeader("Cache-Control");
@@ -330,7 +330,7 @@ void Proxy::processGet(int client_fd, int server_fd, string hostname, string por
                 pthread_mutex_lock(&threadLock);   
                 cache[cacheKey] = completeResponse; 
                 if(strHasSubstr(resCC, "no-cache") || strHasSubstr(reqCC, "no-cache")){
-                    logfile << user->getID() << ": cached, but requires re-validation" << getExpiredTime(resStr) << endl;
+                    logfile << user->getID() << ": cached, but requires re-validation" << endl;
                 }
                 else{
                     logfile << user->getID() << ": cached, expires at " << getExpiredTime(resStr) << endl;

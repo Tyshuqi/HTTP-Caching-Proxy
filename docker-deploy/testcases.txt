@@ -1,0 +1,256 @@
+========================================================================
+    GET REQUEST
+========================================================================
+
+-----------------------------------------------------------------------------------------------
+    1. http://run.mocky.io/v3/99db4aea-9e98-4c4f-bd0e-83cb5205e93d
+
+    This response has "Cache-Control: max-age=10"
+    Requests within ten seconds after cache will get "in cache, valid" 
+    Requests after ten seconds will get "in cache, but expired at xxx" and need revalidation.
+-----------------------------------------------------------------------------------------------
+log:
+
+0: "CONNECT canvas.duke.edu:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 00:51:44 2024
+0: Responding "HTTP/1.1 200 OK"
+2: "GET http://run.mocky.io/v3/99db4aea-9e98-4c4f-bd0e-83cb5205e93d HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 00:51:44 2024
+2: not in cache
+2: Requesting "GET http://run.mocky.io/v3/99db4aea-9e98-4c4f-bd0e-83cb5205e93d HTTP/1.1" from run.mocky.io
+2: Received "HTTP/1.1 200 OK" from run.mocky.io
+2: Responding "HTTP/1.1 200 OK"
+2: cached, expires at Sun, 03 Mar 2024 00:51:54 GMT
+1: "GET http://run.mocky.io/v3/99db4aea-9e98-4c4f-bd0e-83cb5205e93d HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 00:51:44 2024
+4: "CONNECT exp.notion.so:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 00:51:56 2024
+1: in cache, valid
+1: Responding "HTTP/1.1 200 OK"
+4: Responding "HTTP/1.1 200 OK"
+3: "GET http://run.mocky.io/v3/99db4aea-9e98-4c4f-bd0e-83cb5205e93d HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 00:51:56 2024
+3: in cache, but expired at Sun, 03 Mar 2024 00:51:54 GMT
+3: Requesting "GET http://run.mocky.io/v3/99db4aea-9e98-4c4f-bd0e-83cb5205e93d HTTP/1.1" from run.mocky.io
+3: Received "HTTP/1.1 200 OK" from run.mocky.io
+3: Responding "HTTP/1.1 200 OK"
+3: cached, expires at Sun, 03 Mar 2024 00:52:10 GMT
+
+-----------------------------------------------------------------------------------------------
+    2. http://run.mocky.io/v3/87615868-099e-4a80-9e26-432a6f1ac615
+
+    This response has "Cache-Control: no-cache"
+    It will be stored in the cache, but always needs to be revalidated.
+-----------------------------------------------------------------------------------------------
+log:
+
+0: "CONNECT beacons4.gvt2.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 00:36:10 2024
+0: Responding "HTTP/1.1 200 OK"
+1: "GET http://run.mocky.io/v3/87615868-099e-4a80-9e26-432a6f1ac615 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 00:36:12 2024
+3: "CONNECT safebrowsing.google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 00:36:12 2024
+3: Responding "HTTP/1.1 200 OK"
+1: not in cache
+1: Requesting "GET http://run.mocky.io/v3/87615868-099e-4a80-9e26-432a6f1ac615 HTTP/1.1" from run.mocky.io
+1: Received "HTTP/1.1 200 OK" from run.mocky.io
+1: Responding "HTTP/1.1 200 OK"
+1: cached, but requires re-validation
+4: "CONNECT canvas.duke.edu:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 00:36:15 2024
+4: Responding "HTTP/1.1 200 OK"
+2: "GET http://run.mocky.io/v3/87615868-099e-4a80-9e26-432a6f1ac615 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 00:36:12 2024
+2: in cache, requires validation
+2: Requesting "GET http://run.mocky.io/v3/87615868-099e-4a80-9e26-432a6f1ac615 HTTP/1.1" from run.mocky.io
+2: Received "HTTP/1.1 200 OK" from run.mocky.io
+2: Responding "HTTP/1.1 200 OK"
+2: cached, but requires re-validation
+
+-----------------------------------------------------------------------------------------------
+    3. http://run.mocky.io/v3/250337ce-97af-41ea-a170-3908c0217142
+
+    This response has "Cache-Control: no-store"
+    It will not be stored in the cache.
+-----------------------------------------------------------------------------------------------
+log:  (The log may look a little messy, please just focus on GET request)
+
+0: "CONNECT safebrowsing.google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:13:35 2024
+1: "CONNECT optimizationguide-pa.googleapis.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:13:35 2024
+2: "GET http://run.mocky.io/v3/250337ce-97af-41ea-a170-3908c0217142 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:13:35 2024
+0: Responding "HTTP/1.1 200 OK"
+1: Responding "HTTP/1.1 200 OK"
+2: not in cache
+2: Requesting "GET http://run.mocky.io/v3/250337ce-97af-41ea-a170-3908c0217142 HTTP/1.1" from run.mocky.io
+2: Received "HTTP/1.1 200 OK" from run.mocky.io
+2: Responding "HTTP/1.1 200 OK"
+2: not cacheable because no-store
+4: "CONNECT b1.nel.goog:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:13:37 2024
+4: Responding "HTTP/1.1 200 OK"
+5: "CONNECT google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:13:37 2024
+5: Responding "HTTP/1.1 200 OK"
+6: "CONNECT e2c16.gcp.gvt2.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:13:37 2024
+6: Responding "HTTP/1.1 200 OK"
+7: "CONNECT canvas.duke.edu:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:13:38 2024
+7: Responding "HTTP/1.1 200 OK"
+8: "CONNECT clients4.google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:13:42 2024
+8: Responding "HTTP/1.1 200 OK"
+9: "CONNECT beacons.gcp.gvt2.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:13:43 2024
+9: Responding "HTTP/1.1 200 OK"
+10: "CONNECT e2c75.gcp.gvt2.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:13:43 2024
+3: "GET http://run.mocky.io/v3/250337ce-97af-41ea-a170-3908c0217142 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:13:35 2024
+6: Tunnel closed
+3: not in cache
+3: Requesting "GET http://run.mocky.io/v3/250337ce-97af-41ea-a170-3908c0217142 HTTP/1.1" from run.mocky.io
+3: Received "HTTP/1.1 200 OK" from run.mocky.io
+3: Responding "HTTP/1.1 200 OK"
+3: not cacheable because no-store
+10: Responding "HTTP/1.1 200 OK"
+
+
+
+========================================================================
+    POST REQUEST
+========================================================================
+
+-----------------------------------------------------------------------------------------------
+    1. http://httpbin.org/forms/post
+-----------------------------------------------------------------------------------------------
+log:
+0: "GET http://httpbin.org/forms/post HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:42:38 2024
+2: "CONNECT safebrowsing.google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:42:38 2024
+2: Responding "HTTP/1.1 200 OK"
+0: not in cache
+0: Requesting "GET http://httpbin.org/forms/post HTTP/1.1" from httpbin.org
+0: Received "HTTP/1.1 200 OK" from httpbin.org
+0: Responding "HTTP/1.1 200 OK"
+0: not cacheable because no-store
+1: "" from 10.197.249.96 @ Sun Mar  3 01:42:38 2024
+2: Tunnel closed
+4: "GET http://httpbin.org/forms/post HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:42:39 2024
+4: not in cache
+4: Requesting "GET http://httpbin.org/forms/post HTTP/1.1" from httpbin.org
+4: Received "HTTP/1.1 200 OK" from httpbin.org
+4: Responding "HTTP/1.1 200 OK"
+4: not cacheable because no-store
+3: "GET http://httpbin.org/forms/post HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:42:39 2024
+3: not in cache
+3: Requesting "GET http://httpbin.org/forms/post HTTP/1.1" from httpbin.org
+3: Received "HTTP/1.1 200 OK" from httpbin.org
+3: Responding "HTTP/1.1 200 OK"
+3: not cacheable because no-store
+5: "" from 10.197.249.96 @ Sun Mar  3 01:42:40 2024
+6: "CONNECT clients4.google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:42:49 2024
+6: Responding "HTTP/1.1 200 OK"
+6: Tunnel closed
+9: "CONNECT safebrowsing.google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:42:59 2024
+8: "POST http://httpbin.org/post HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:42:59 2024
+9: Responding "HTTP/1.1 200 OK"
+8: Requesting "POST http://httpbin.org/post HTTP/1.1" from httpbin.org
+8: Received "HTTP/1.1 200 OK" from httpbin.org
+8: Responding "HTTP/1.1 200 OK"
+
+
+========================================================================
+    CONNECT REQUEST
+========================================================================
+
+-----------------------------------------------------------------------------------------------
+    1. https://www.youtube.com/
+-----------------------------------------------------------------------------------------------
+log:
+
+0: "CONNECT ogs.google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:22 2024
+0: Responding "HTTP/1.1 200 OK"
+1: "CONNECT www.gstatic.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:22 2024
+2: "CONNECT ssl.gstatic.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:22 2024
+1: Responding "HTTP/1.1 200 OK"
+2: Responding "HTTP/1.1 200 OK"
+3: "CONNECT ogs.google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:22 2024
+3: Responding "HTTP/1.1 200 OK"
+4: "CONNECT canvas.duke.edu:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:24 2024
+4: Responding "HTTP/1.1 200 OK"
+3: Tunnel closed
+4: Tunnel closed
+2: Tunnel closed
+1: Tunnel closed
+0: Tunnel closed
+5: "CONNECT www.google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:25 2024
+6: "CONNECT cloudsearch.googleapis.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:25 2024
+5: Responding "HTTP/1.1 200 OK"
+6: Responding "HTTP/1.1 200 OK"
+7: "CONNECT optimizationguide-pa.googleapis.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:26 2024
+9: "CONNECT fonts.gstatic.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:26 2024
+8: "CONNECT www.youtube.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:26 2024
+10: "CONNECT fonts.googleapis.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:26 2024
+7: Responding "HTTP/1.1 200 OK"
+9: Responding "HTTP/1.1 200 OK"
+8: Responding "HTTP/1.1 200 OK"
+10: Responding "HTTP/1.1 200 OK"
+11: "CONNECT i.ytimg.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:26 2024
+12: "CONNECT fonts.gstatic.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:26 2024
+11: Responding "HTTP/1.1 200 OK"
+12: Responding "HTTP/1.1 200 OK"
+13: "CONNECT googleads.g.doubleclick.net:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:27 2024
+13: Responding "HTTP/1.1 200 OK"
+14: "CONNECT lh4.googleusercontent.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:27 2024
+15: "CONNECT www.google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:27 2024
+14: Responding "HTTP/1.1 200 OK"
+15: Responding "HTTP/1.1 200 OK"
+16: "CONNECT lh6.googleusercontent.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:27 2024
+17: "CONNECT lh5.googleusercontent.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:27 2024
+16: Responding "HTTP/1.1 200 OK"
+17: Responding "HTTP/1.1 200 OK"
+18: "CONNECT yt3.ggpht.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:28 2024
+18: Responding "HTTP/1.1 200 OK"
+19: "CONNECT content-autofill.googleapis.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:28 2024
+19: Responding "HTTP/1.1 200 OK"
+21: "CONNECT rr3---sn-hjoj-gq0l.googlevideo.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:28 2024
+20: "CONNECT rr3---sn-hjoj-gq0l.googlevideo.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:28 2024
+20: Responding "HTTP/1.1 200 OK"
+21: Responding "HTTP/1.1 200 OK"
+22: "CONNECT accounts.youtube.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:28 2024
+23: "CONNECT jnn-pa.googleapis.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:28 2024
+24: "CONNECT www.gstatic.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:28 2024
+22: Responding "HTTP/1.1 200 OK"
+23: Responding "HTTP/1.1 200 OK"
+24: Responding "HTTP/1.1 200 OK"
+25: "CONNECT static.doubleclick.net:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:28 2024
+25: Responding "HTTP/1.1 200 OK"
+26: "CONNECT rr2---sn-hjoj-gq0l.googlevideo.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:30 2024
+27: "CONNECT rr2---sn-hjoj-gq0l.googlevideo.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:30 2024
+26: Responding "HTTP/1.1 200 OK"
+27: Responding "HTTP/1.1 200 OK"
+28: "CONNECT rr4---sn-hjoj-gq0l.googlevideo.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:31 2024
+29: "CONNECT rr4---sn-hjoj-gq0l.googlevideo.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:31 2024
+29: Responding "HTTP/1.1 200 OK"
+28: Responding "HTTP/1.1 200 OK"
+30: "CONNECT youtube.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:32 2024
+30: Responding "HTTP/1.1 200 OK"
+12: Tunnel closed
+20: Tunnel closed
+27: Tunnel closed
+14: Tunnel closed
+10: Tunnel closed
+7: Tunnel closed
+17: Tunnel closed
+15: Tunnel closed
+28: Tunnel closed
+21: Tunnel closed
+23: Tunnel closed
+24: Tunnel closed
+26: Tunnel closed
+16: Tunnel closed
+30: Tunnel closed
+9: Tunnel closed
+22: Tunnel closed
+19: Tunnel closed
+5: Tunnel closed
+6: Tunnel closed
+13: Tunnel closed
+18: Tunnel closed
+25: Tunnel closed
+11: Tunnel closed
+29: Tunnel closed
+8: Tunnel closed
+31: "CONNECT lh5.googleusercontent.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:34 2024
+31: Responding "HTTP/1.1 200 OK"
+32: "CONNECT www.youtube.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:34 2024
+32: Responding "HTTP/1.1 200 OK"
+33: "CONNECT yt3.ggpht.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:34 2024
+34: "CONNECT i.ytimg.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:34 2024
+33: Responding "HTTP/1.1 200 OK"
+34: Responding "HTTP/1.1 200 OK"
+35: "CONNECT clients4.google.com:443 HTTP/1.1" from 10.197.249.96 @ Sun Mar  3 01:50:37 2024
+35: Responding "HTTP/1.1 200 OK"
